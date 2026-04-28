@@ -1,0 +1,58 @@
+---
+description: Concurrency, transactions, and race-condition rules. Required when writing pack purchases, trades, listings, auctions, bids, settlement, or anything that mutates user_cards / balances / inventory.
+globs:
+  - "apps/web/src/services/**/*.ts"
+  - "apps/web/src/app/api/**/route.ts"
+  - "apps/realtime/src/queues/**/*.ts"
+  - "apps/realtime/src/subscribers/**/*.ts"
+  - "**/*.sql"
+alwaysApply: false
+---
+
+# Concurrency Rules
+
+The work-trial review **specifically tries to break the system with concurrent purchases, trades, and bids**. The rules below are how we stay correct.
+
+## Transaction shape
+
+1. Every state-changing API endpoint runs its work inside `db.transaction(async (tx) => { ... })`.
+2. **Publish to Redis pub/sub AFTER the commit, never inside the transaction.** A failed commit followed by a published event is the worst case.
+3. **Read fresh, lock, write, commit.** Never read a value, do work in JS, then write — another transaction may have moved the value.
+4. **Idempotency**: every mutation endpoint requires an `idempotencyKey` in its zod schema. Persist it in a UNIQUE column (`pack_purchases.idempotency_key`, `bids.idempotency_key`) so a retried request collapses to one row.
+
+## Locking patterns
+
+| Path                | Lock                                                                      |
+| ------------------- | ------------------------------------------------------------------------- |
+| Pack purchase       | Atomic guarded `UPDATE pack_drops ... WHERE remaining > 0` (no explicit lock needed). |
+| Listing buy         | `SELECT * FROM listings WHERE id = $1 FOR UPDATE` first.                  |
+| Auction bid         | `SELECT * FROM auctions WHERE id = $1 FOR UPDATE` first.                  |
+| Auction settle      | Same — re-lock the auction row, re-check `end_at`, then settle.           |
+| User_card status    | `SELECT * FROM user_cards WHERE id = $c FOR UPDATE` before transitioning. |
+
+## What "atomic" means
+
+- Money never moves without the card moving.
+- Card never moves without money moving.
+- Inventory never decrements without a purchase being recorded.
+- A bid never debits `available` without crediting `held` in the same UPDATE.
+
+If you find yourself doing two updates in JS between a SELECT and a write, you have a bug. Either fold it into one `UPDATE ... WHERE ... RETURNING`, or hold a `FOR UPDATE` lock the whole way.
+
+## Anti-snipe
+
+The auction's `end_at` is **server-authoritative**. The client clock displays `end_at`, never derives it. Extensions happen inside the same transaction as the bid. After commit, the API publishes `pv.auction.extended` and re-enqueues the BullMQ close job.
+
+## Settlement worker
+
+The auction-close worker is **idempotent and safe to run twice**. On wakeup:
+1. Lock the auction.
+2. If `status='settled'` → return.
+3. If `end_at > now()` → re-enqueue at `end_at`, return.
+4. Otherwise settle.
+
+## Forbidden patterns
+
+- `SELECT current_balance` -> `if (...) UPDATE` — race-prone. Use guarded `UPDATE` instead.
+- Long DB transactions that call external APIs. Fetch first, *then* open the transaction with the data you need.
+- Caching balance, inventory, or auction state for write decisions. Cache reads, never writes.

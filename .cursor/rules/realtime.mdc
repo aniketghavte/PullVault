@@ -1,0 +1,57 @@
+---
+description: Real-time pipeline rules for Socket.io rooms, Redis pub/sub channels, and BullMQ job patterns.
+globs:
+  - "apps/web/src/lib/realtime/**/*.ts"
+  - "apps/realtime/**/*.ts"
+alwaysApply: false
+---
+
+# Realtime Rules
+
+## Topology
+
+`Web (publisher) → Redis pub/sub → Realtime server (subscriber + Socket.io broadcaster) → Browser`.
+
+Web NEVER speaks Socket.io directly. Realtime NEVER writes to financial tables (only to `auctions` during settlement, and only via the same transactional patterns as the web service layer).
+
+## Channels & rooms
+
+Centralized in `@pullvault/shared/constants`:
+
+- Channels (Redis pub/sub):
+  - `pv:auction:<id>:events`
+  - `pv:drop:<id>:events`
+  - `pv:portfolio:<userId>`
+  - `pv:prices:ticks`
+- Rooms (Socket.io):
+  - `auction:<id>`
+  - `drop:<id>`
+  - `portfolio:<userId>`
+
+Always use `REDIS_KEYS.channel.*` and `SOCKET_ROOMS.*` helpers — never construct strings inline.
+
+## Event names
+
+Internal envelope (over Redis): `INTERNAL_EVENTS.*` from `@pullvault/shared/events`.
+Each envelope is `{ event, emittedAt, payload }`.
+
+Client events (over Socket.io): kebab-namespaced (`auction:bid`, `drop:inventory`, `portfolio:invalidate`, `price:tick`).
+
+## Reliability assumption
+
+Pub/sub is **best-effort**. If Redis hiccups:
+- Web continues — the DB commit already succeeded.
+- Realtime stays consistent on the next message.
+- Browser falls back to its TanStack Query refetch loop on focus / reconnect.
+
+Never make a state decision based on whether a pub/sub event was delivered.
+
+## Reconnect
+
+On `socket.connect()` the client re-emits `auction:join`/`drop:join` for any rooms it cares about. The server replies with a fresh `auction:state` snapshot read from Postgres so the client is current.
+
+## BullMQ
+
+- Every queue/worker takes its own `newRedisConnection()`. Sharing a connection breaks BullMQ.
+- Use deterministic `jobId`s for delayed jobs that may be rescheduled (e.g. `auction-close:<auctionId>:<endAtMs>`). This lets us skip duplicate work when anti-snipe extends an auction.
+- Workers MUST be idempotent — they may run twice on retry.

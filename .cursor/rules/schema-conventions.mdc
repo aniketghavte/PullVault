@@ -1,0 +1,57 @@
+---
+description: Database schema conventions for Drizzle + Postgres. Required when adding or changing any column, index, or table.
+globs:
+  - "packages/db/**/*.ts"
+  - "packages/db/**/*.sql"
+alwaysApply: false
+---
+
+# DB Schema Conventions
+
+## Naming
+
+- Table names: `snake_case`, plural (`pack_drops`, `user_cards`, `ledger_entries`).
+- Column names: `snake_case`. Money columns end in `_usd`. Timestamps end in `_at`.
+- Enum types are declared with `pgEnum('snake_case_name', [...])` and reused.
+
+## Required columns on every "thing" table
+
+- `id uuid primary key default random()`
+- `created_at timestamp with time zone not null default now()`
+- `updated_at` only when we actually mutate the row in place (and add the trigger).
+
+## Money columns
+
+- Type: `numeric(14, 2)`.
+- Add a `CHECK (... >= 0)` for balances and any other field that must be non-negative.
+
+## Status enums
+
+When a row has a lifecycle (e.g. listings, auctions, holds), define a `pgEnum` for the status and constrain transitions in service code, not in the DB. Add a `*_at` timestamp for each terminal state we care to query (`sold_at`, `cancelled_at`, `settled_at`).
+
+## Uniqueness for active states
+
+Use partial unique indexes for "at most one active X per Y":
+
+```ts
+uniqueIndex('listings_active_one_per_card_ux')
+  .on(t.userCardId)
+  .where(sql`status = 'active'`);
+```
+
+This is how we make double-listing impossible at the database level.
+
+## Indexes
+
+- Foreign-key columns: usually need an index for joins.
+- Status enums queried by status: index `(status)` or `(status, created_at)`.
+- Auction worker: index on `end_at WHERE status IN ('live','extended','scheduled')`.
+
+## Migrations workflow
+
+1. Edit `packages/db/src/schema.ts`.
+2. `pnpm db:generate` — review the generated SQL diff carefully.
+3. `pnpm db:migrate` against staging.
+4. If you added RLS policies or triggers, update `packages/db/sql/post-migration.sql` and re-apply.
+
+Never edit existing migrations after they've been applied to a shared environment.

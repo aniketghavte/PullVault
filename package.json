@@ -1,0 +1,33 @@
+{
+  "name": "pullvault",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PullVault - Pokemon card collectibles platform with pack ripping, P2P trading, and live auctions",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/*\" run dev",
+    "dev:web": "pnpm --filter @pullvault/web dev",
+    "dev:realtime": "pnpm --filter @pullvault/realtime dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:generate": "pnpm --filter @pullvault/db generate",
+    "db:migrate": "pnpm --filter @pullvault/db migrate",
+    "db:push": "pnpm --filter @pullvault/db push",
+    "db:studio": "pnpm --filter @pullvault/db studio",
+    "db:seed": "pnpm --filter @pullvault/db seed",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "dotenv-cli": "^11.0.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,30 @@
+---
+description: Money handling rules — required when touching balances, prices, fees, payouts, listings, bids, ledger entries, or any financial value in TS or SQL.
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.sql"
+alwaysApply: false
+---
+
+# Money Handling
+
+PullVault deals with money. Floating point is forbidden in any path that touches a financial value.
+
+## Rules
+
+1. Use `decimal.js` everywhere money math happens. Import from `@pullvault/shared/money`:
+   `import { money, add, sub, mul, feeOf, toMoneyString, formatUSD } from '@pullvault/shared/money';`
+2. Money on the wire and in JSON: a string with up to 2 decimals (`"12.34"`). Use `toMoneyString()`.
+3. Money in Postgres: `NUMERIC(14, 2)`. Never `float`/`double`/`real`.
+4. Never `parseFloat`, never `Number(x)` for money. Use `money(x)`.
+5. Rounding policy:
+   - Display & default arithmetic: `ROUND_HALF_UP`.
+   - Crediting a user (we owe them): `ROUND_DOWN` (`truncate2`). We never overpay by a fractional cent.
+   - Charging fees: `ROUND_DOWN` (`feeOf` already does this). We never overcharge.
+6. Balance writes use guarded `UPDATE`s in SQL:
+   `UPDATE profiles SET available_balance_usd = available_balance_usd - $amount WHERE id = $u AND available_balance_usd >= $amount RETURNING ...;`
+   A 0-row result means insufficient funds — return `INSUFFICIENT_FUNDS` and abort the transaction.
+7. Every money mutation MUST also write `ledger_entries` row(s) inside the same transaction. Sum-by-user must reconcile to `profiles.available + profiles.held`.
+8. The `held_balance` is only changed via `balance_holds` lifecycle (`held → released | consumed`).
+9. Configurable rates (fees, default balance, min increments) live in `@pullvault/shared/constants`. Don't hardcode numbers in services.
