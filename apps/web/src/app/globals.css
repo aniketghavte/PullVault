@@ -3,16 +3,28 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
 body {
-  background: linear-gradient(180deg, #0b0d14 0%, #0a0c12 100%);
-  color: #e5e7eb;
+  background: #ffffff;
+  color: #212121;
   min-height: 100%;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Cohere-style focus rings */
+:focus-visible {
+  outline: 2px solid #4c6ee6;
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: #9b60aa;
 }

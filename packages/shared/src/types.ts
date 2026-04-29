@@ -2,9 +2,9 @@
 // These are the shapes that flow over HTTP and Socket.io.
 // DB row types live in @pullvault/db; map them into these at the boundary.
 
-export type UUID = string;
+import type { Rarity } from './constants';
 
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'ultra_rare' | 'secret_rare';
+export type UUID = string;
 
 export type UserCardStatus = 'held' | 'listed' | 'in_auction' | 'transferred';
 

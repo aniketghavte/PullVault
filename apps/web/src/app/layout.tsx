@@ -1,8 +1,20 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
+import { AnnouncementBar } from '@/components/ui/AnnouncementBar';
+import { SiteFooter } from '@/components/ui/SiteFooter';
+import { SiteNav } from '@/components/ui/SiteNav';
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+});
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+});
 
 export const metadata: Metadata = {
   title: 'PullVault',
@@ -11,9 +23,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="font-sans antialiased min-h-screen">
-        <div className="mx-auto max-w-7xl px-4 py-6">{children}</div>
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable}`}>
+      <body className="font-sans antialiased min-h-screen bg-canvas text-ink">
+        <AnnouncementBar />
+        <SiteNav />
+        <main>{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );

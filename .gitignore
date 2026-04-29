@@ -44,3 +44,6 @@ drizzle/.snapshots/
 # test artifacts
 playwright-report/
 test-results/
+
+
+status.md

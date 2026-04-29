@@ -1,6 +1,6 @@
 import 'server-only';
 import { Decimal, money, mul, add } from '@pullvault/shared/money';
-import type { Rarity } from '@pullvault/shared/types';
+import type { Rarity } from '@pullvault/shared/constants';
 
 // Pure functions: testable without a DB.
 

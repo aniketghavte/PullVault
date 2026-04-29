@@ -1,0 +1,1986 @@
+{
+  "generatedAt": "2026-04-29T10:06:32.130Z",
+  "count": 220,
+  "cards": [
+    {
+      "id": "xy5-1",
+      "externalId": "xy5-1",
+      "name": "Weedle",
+      "set": "Primal Clash",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy5/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "det1-1",
+      "externalId": "det1-1",
+      "name": "Bulbasaur",
+      "set": "Detective Pikachu",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/det1/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "mcd19-1",
+      "externalId": "mcd19-1",
+      "name": "Caterpie",
+      "set": "McDonald's Collection 2019",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/mcd19/1.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "ru1-1",
+      "externalId": "ru1-1",
+      "name": "Venusaur",
+      "set": "Pokémon Rumble",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/ru1/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "xy2-1",
+      "externalId": "xy2-1",
+      "name": "Caterpie",
+      "set": "Flashfire",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy2/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "xy2-2",
+      "externalId": "xy2-2",
+      "name": "Metapod",
+      "set": "Flashfire",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy2/2.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "sm9-2",
+      "externalId": "sm9-2",
+      "name": "Weedle",
+      "set": "Team Up",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm9/2.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "ru1-2",
+      "externalId": "ru1-2",
+      "name": "Cherrim",
+      "set": "Pokémon Rumble",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/ru1/2.png",
+      "marketPriceUSD": "0.11"
+    },
+    {
+      "id": "mcd19-2",
+      "externalId": "mcd19-2",
+      "name": "Alolan Exeggutor",
+      "set": "McDonald's Collection 2019",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/mcd19/2.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "xy5-2",
+      "externalId": "xy5-2",
+      "name": "Kakuna",
+      "set": "Primal Clash",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy5/2.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "xy11-1",
+      "externalId": "xy11-1",
+      "name": "Tangela",
+      "set": "Steam Siege",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy11/1.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "bw1-1",
+      "externalId": "bw1-1",
+      "name": "Snivy",
+      "set": "Black & White",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw1/1.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "sm115-1",
+      "externalId": "sm115-1",
+      "name": "Caterpie",
+      "set": "Hidden Fates",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm115/1.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "si1-1",
+      "externalId": "si1-1",
+      "name": "Mew",
+      "set": "Southern Islands",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/si1/1.png",
+      "marketPriceUSD": "0.11"
+    },
+    {
+      "id": "sm3-1",
+      "externalId": "sm3-1",
+      "name": "Caterpie",
+      "set": "Burning Shadows",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm3/1.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "bw10-1",
+      "externalId": "bw10-1",
+      "name": "Surskit",
+      "set": "Plasma Blast",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw10/1.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "xy7-1",
+      "externalId": "xy7-1",
+      "name": "Oddish",
+      "set": "Ancient Origins",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy7/1.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "sm1-1",
+      "externalId": "sm1-1",
+      "name": "Caterpie",
+      "set": "Sun & Moon",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm1/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "sm12-2",
+      "externalId": "sm12-2",
+      "name": "Oddish",
+      "set": "Cosmic Eclipse",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm12/2.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "bw1-2",
+      "externalId": "bw1-2",
+      "name": "Snivy",
+      "set": "Black & White",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw1/2.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "ru1-3",
+      "externalId": "ru1-3",
+      "name": "Ninetales",
+      "set": "Pokémon Rumble",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/ru1/3.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "si1-2",
+      "externalId": "si1-2",
+      "name": "Pidgeot",
+      "set": "Southern Islands",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/si1/2.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "xy7-2",
+      "externalId": "xy7-2",
+      "name": "Gloom",
+      "set": "Ancient Origins",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy7/2.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "swsh35-2",
+      "externalId": "swsh35-2",
+      "name": "Weedle",
+      "set": "Champion's Path",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh35/2.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "xy11-2",
+      "externalId": "xy11-2",
+      "name": "Tangrowth",
+      "set": "Steam Siege",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy11/2.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "det1-3",
+      "externalId": "det1-3",
+      "name": "Morelull",
+      "set": "Detective Pikachu",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/det1/3.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "sm9-3",
+      "externalId": "sm9-3",
+      "name": "Weedle",
+      "set": "Team Up",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm9/3.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "sm1-2",
+      "externalId": "sm1-2",
+      "name": "Metapod",
+      "set": "Sun & Moon",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm1/2.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "mcd19-3",
+      "externalId": "mcd19-3",
+      "name": "Magmar",
+      "set": "McDonald's Collection 2019",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/mcd19/3.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "sm115-2",
+      "externalId": "sm115-2",
+      "name": "Metapod",
+      "set": "Hidden Fates",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm115/2.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "sm2-1",
+      "externalId": "sm2-1",
+      "name": "Bellsprout",
+      "set": "Guardians Rising",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm2/1.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "xy4-1",
+      "externalId": "xy4-1",
+      "name": "Venonat",
+      "set": "Phantom Forces",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy4/1.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "bw11-1",
+      "externalId": "bw11-1",
+      "name": "Tangela",
+      "set": "Legendary Treasures",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw11/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "bw9-1",
+      "externalId": "bw9-1",
+      "name": "Weedle",
+      "set": "Plasma Freeze",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw9/1.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "bw7-1",
+      "externalId": "bw7-1",
+      "name": "Oddish",
+      "set": "Boundaries Crossed",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw7/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "bw5-1",
+      "externalId": "bw5-1",
+      "name": "Bulbasaur",
+      "set": "Dark Explorers",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw5/1.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "sm5-1",
+      "externalId": "sm5-1",
+      "name": "Exeggcute",
+      "set": "Ultra Prism",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm5/1.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "xy10-1",
+      "externalId": "xy10-1",
+      "name": "Shuckle",
+      "set": "Fates Collide",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy10/1.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "sm8-1",
+      "externalId": "sm8-1",
+      "name": "Tangela",
+      "set": "Lost Thunder",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm8/1.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "dpp-DP01",
+      "externalId": "dpp-DP01",
+      "name": "Turtwig",
+      "set": "DP Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/dpp/DP01.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "basep-1",
+      "externalId": "basep-1",
+      "name": "Pikachu",
+      "set": "Wizards Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/basep/1.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "swsh4-1",
+      "externalId": "swsh4-1",
+      "name": "Weedle",
+      "set": "Vivid Voltage",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh4/1.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "bw8-1",
+      "externalId": "bw8-1",
+      "name": "Turtwig",
+      "set": "Plasma Storm",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw8/1.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "mcd19-4",
+      "externalId": "mcd19-4",
+      "name": "Alolan Sandshrew",
+      "set": "McDonald's Collection 2019",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/mcd19/4.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "det1-4",
+      "externalId": "det1-4",
+      "name": "Charmander",
+      "set": "Detective Pikachu",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/det1/4.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "bw5-2",
+      "externalId": "bw5-2",
+      "name": "Ivysaur",
+      "set": "Dark Explorers",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw5/2.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "dpp-DP02",
+      "externalId": "dpp-DP02",
+      "name": "Chimchar",
+      "set": "DP Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/dpp/DP02.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "sm2-2",
+      "externalId": "sm2-2",
+      "name": "Weepinbell",
+      "set": "Guardians Rising",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm2/2.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "bw7-2",
+      "externalId": "bw7-2",
+      "name": "Gloom",
+      "set": "Boundaries Crossed",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw7/2.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "swsh35-3",
+      "externalId": "swsh35-3",
+      "name": "Kakuna",
+      "set": "Champion's Path",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh35/3.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "xy2-4",
+      "externalId": "xy2-4",
+      "name": "Pineco",
+      "set": "Flashfire",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy2/4.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "si1-3",
+      "externalId": "si1-3",
+      "name": "Onix",
+      "set": "Southern Islands",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/si1/3.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "bw8-2",
+      "externalId": "bw8-2",
+      "name": "Grotle",
+      "set": "Plasma Storm",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw8/2.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "xy11-3",
+      "externalId": "xy11-3",
+      "name": "Hoppip",
+      "set": "Steam Siege",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy11/3.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "sm3-2",
+      "externalId": "sm3-2",
+      "name": "Metapod",
+      "set": "Burning Shadows",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm3/2.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "swsh1-2",
+      "externalId": "swsh1-2",
+      "name": "Roselia",
+      "set": "Sword & Shield",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh1/2.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "bw10-3",
+      "externalId": "bw10-3",
+      "name": "Lileep",
+      "set": "Plasma Blast",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw10/3.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "bw4-2",
+      "externalId": "bw4-2",
+      "name": "Seedot",
+      "set": "Next Destinies",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw4/2.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "sm9-4",
+      "externalId": "sm9-4",
+      "name": "Kakuna",
+      "set": "Team Up",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm9/4.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "sm5-2",
+      "externalId": "sm5-2",
+      "name": "Yanma",
+      "set": "Ultra Prism",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm5/2.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "sm75-1",
+      "externalId": "sm75-1",
+      "name": "Charmander",
+      "set": "Dragon Majesty",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm75/1.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "bw6-1",
+      "externalId": "bw6-1",
+      "name": "Hoppip",
+      "set": "Dragons Exalted",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw6/1.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "si1-4",
+      "externalId": "si1-4",
+      "name": "Togepi",
+      "set": "Southern Islands",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/si1/4.png",
+      "marketPriceUSD": "0.06"
+    },
+    {
+      "id": "xy11-4",
+      "externalId": "xy11-4",
+      "name": "Skiploom",
+      "set": "Steam Siege",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy11/4.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "sm12-3",
+      "externalId": "sm12-3",
+      "name": "Gloom",
+      "set": "Cosmic Eclipse",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm12/3.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "sm5-3",
+      "externalId": "sm5-3",
+      "name": "Yanmega",
+      "set": "Ultra Prism",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm5/3.png",
+      "marketPriceUSD": "0.11"
+    },
+    {
+      "id": "swsh1-3",
+      "externalId": "swsh1-3",
+      "name": "Roselia",
+      "set": "Sword & Shield",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh1/3.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "swsh4-2",
+      "externalId": "swsh4-2",
+      "name": "Kakuna",
+      "set": "Vivid Voltage",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh4/2.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "xy5-4",
+      "externalId": "xy5-4",
+      "name": "Tangela",
+      "set": "Primal Clash",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy5/4.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "bw1-3",
+      "externalId": "bw1-3",
+      "name": "Servine",
+      "set": "Black & White",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw1/3.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "xy4-3",
+      "externalId": "xy4-3",
+      "name": "Yanma",
+      "set": "Phantom Forces",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy4/3.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "xy7-4",
+      "externalId": "xy7-4",
+      "name": "Bellossom",
+      "set": "Ancient Origins",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy7/4.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "basep-2",
+      "externalId": "basep-2",
+      "name": "Electabuzz",
+      "set": "Wizards Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/basep/2.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "bw4-3",
+      "externalId": "bw4-3",
+      "name": "Kricketot",
+      "set": "Next Destinies",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw4/3.png",
+      "marketPriceUSD": "0.05"
+    },
+    {
+      "id": "bw11-3",
+      "externalId": "bw11-3",
+      "name": "Shuckle",
+      "set": "Legendary Treasures",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw11/3.png",
+      "marketPriceUSD": "0.04"
+    },
+    {
+      "id": "ru1-4",
+      "externalId": "ru1-4",
+      "name": "Heatran",
+      "set": "Pokémon Rumble",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/ru1/4.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "mcd19-5",
+      "externalId": "mcd19-5",
+      "name": "Lapras",
+      "set": "McDonald's Collection 2019",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/mcd19/5.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "sm75-2",
+      "externalId": "sm75-2",
+      "name": "Charmeleon",
+      "set": "Dragon Majesty",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm75/2.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "bw6-2",
+      "externalId": "bw6-2",
+      "name": "Skiploom",
+      "set": "Dragons Exalted",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/bw6/2.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "swsh35-4",
+      "externalId": "swsh35-4",
+      "name": "Beedrill",
+      "set": "Champion's Path",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/swsh35/4.png",
+      "marketPriceUSD": "0.03"
+    },
+    {
+      "id": "dpp-DP03",
+      "externalId": "dpp-DP03",
+      "name": "Piplup",
+      "set": "DP Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/dpp/DP03.png",
+      "marketPriceUSD": "0.07"
+    },
+    {
+      "id": "xy10-2",
+      "externalId": "xy10-2",
+      "name": "Burmy",
+      "set": "Fates Collide",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy10/2.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "sm115-4",
+      "externalId": "sm115-4",
+      "name": "Paras",
+      "set": "Hidden Fates",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/sm115/4.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "xy2-5",
+      "externalId": "xy2-5",
+      "name": "Seedot",
+      "set": "Flashfire",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy2/5.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "xy1-3",
+      "externalId": "xy1-3",
+      "name": "Weedle",
+      "set": "XY",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy1/3.png",
+      "marketPriceUSD": "0.08"
+    },
+    {
+      "id": "dpp-DP04",
+      "externalId": "dpp-DP04",
+      "name": "Pachirisu",
+      "set": "DP Black Star Promos",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/dpp/DP04.png",
+      "marketPriceUSD": "0.10"
+    },
+    {
+      "id": "xy2-6",
+      "externalId": "xy2-6",
+      "name": "Nuzleaf",
+      "set": "Flashfire",
+      "rarity": "common",
+      "imageUrl": "https://images.pokemontcg.io/xy2/6.png",
+      "marketPriceUSD": "0.09"
+    },
+    {
+      "id": "hgss4-1",
+      "externalId": "hgss4-1",
+      "name": "Aggron",
+      "set": "HS—Triumphant",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss4/1.png",
+      "marketPriceUSD": "1.81"
+    },
+    {
+      "id": "pl1-1",
+      "externalId": "pl1-1",
+      "name": "Ampharos",
+      "set": "Platinum",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl1/1.png",
+      "marketPriceUSD": "1.98"
+    },
+    {
+      "id": "dp3-1",
+      "externalId": "dp3-1",
+      "name": "Ampharos",
+      "set": "Secret Wonders",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp3/1.png",
+      "marketPriceUSD": "1.42"
+    },
+    {
+      "id": "dv1-1",
+      "externalId": "dv1-1",
+      "name": "Dratini",
+      "set": "Dragon Vault",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dv1/1.png",
+      "marketPriceUSD": "2.18"
+    },
+    {
+      "id": "pl3-1",
+      "externalId": "pl3-1",
+      "name": "Absol G",
+      "set": "Supreme Victors",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl3/1.png",
+      "marketPriceUSD": "0.91"
+    },
+    {
+      "id": "ex12-1",
+      "externalId": "ex12-1",
+      "name": "Aerodactyl",
+      "set": "Legend Maker",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex12/1.png",
+      "marketPriceUSD": "2.96"
+    },
+    {
+      "id": "ex3-1",
+      "externalId": "ex3-1",
+      "name": "Absol",
+      "set": "Dragon",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex3/1.png",
+      "marketPriceUSD": "1.65"
+    },
+    {
+      "id": "ecard2-H1",
+      "externalId": "ecard2-H1",
+      "name": "Ampharos",
+      "set": "Aquapolis",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ecard2/H1.png",
+      "marketPriceUSD": "2.02"
+    },
+    {
+      "id": "base4-1",
+      "externalId": "base4-1",
+      "name": "Alakazam",
+      "set": "Base Set 2",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base4/1.png",
+      "marketPriceUSD": "1.65"
+    },
+    {
+      "id": "hgss1-1",
+      "externalId": "hgss1-1",
+      "name": "Arcanine",
+      "set": "HeartGold & SoulSilver",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss1/1.png",
+      "marketPriceUSD": "2.51"
+    },
+    {
+      "id": "ex11-1",
+      "externalId": "ex11-1",
+      "name": "Beedrill δ",
+      "set": "Delta Species",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex11/1.png",
+      "marketPriceUSD": "2.46"
+    },
+    {
+      "id": "ex7-1",
+      "externalId": "ex7-1",
+      "name": "Azumarill",
+      "set": "Team Rocket Returns",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex7/1.png",
+      "marketPriceUSD": "1.38"
+    },
+    {
+      "id": "gym1-1",
+      "externalId": "gym1-1",
+      "name": "Blaine's Moltres",
+      "set": "Gym Heroes",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym1/1.png",
+      "marketPriceUSD": "0.89"
+    },
+    {
+      "id": "base3-1",
+      "externalId": "base3-1",
+      "name": "Aerodactyl",
+      "set": "Fossil",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base3/1.png",
+      "marketPriceUSD": "3.17"
+    },
+    {
+      "id": "sm9-1",
+      "externalId": "sm9-1",
+      "name": "Celebi & Venusaur-GX",
+      "set": "Team Up",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/sm9/1.png",
+      "marketPriceUSD": "2.72"
+    },
+    {
+      "id": "pop6-1",
+      "externalId": "pop6-1",
+      "name": "Bastiodon",
+      "set": "POP Series 6",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop6/1.png",
+      "marketPriceUSD": "2.19"
+    },
+    {
+      "id": "ecard2-H2",
+      "externalId": "ecard2-H2",
+      "name": "Arcanine",
+      "set": "Aquapolis",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ecard2/H2.png",
+      "marketPriceUSD": "1.79"
+    },
+    {
+      "id": "hgss4-2",
+      "externalId": "hgss4-2",
+      "name": "Altaria",
+      "set": "HS—Triumphant",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss4/2.png",
+      "marketPriceUSD": "1.05"
+    },
+    {
+      "id": "pl1-2",
+      "externalId": "pl1-2",
+      "name": "Blastoise",
+      "set": "Platinum",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl1/2.png",
+      "marketPriceUSD": "1.33"
+    },
+    {
+      "id": "ex3-2",
+      "externalId": "ex3-2",
+      "name": "Altaria",
+      "set": "Dragon",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex3/2.png",
+      "marketPriceUSD": "1.01"
+    },
+    {
+      "id": "dp3-2",
+      "externalId": "dp3-2",
+      "name": "Blastoise",
+      "set": "Secret Wonders",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp3/2.png",
+      "marketPriceUSD": "1.64"
+    },
+    {
+      "id": "base3-2",
+      "externalId": "base3-2",
+      "name": "Articuno",
+      "set": "Fossil",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base3/2.png",
+      "marketPriceUSD": "2.18"
+    },
+    {
+      "id": "pl3-2",
+      "externalId": "pl3-2",
+      "name": "Blaziken FB",
+      "set": "Supreme Victors",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl3/2.png",
+      "marketPriceUSD": "1.23"
+    },
+    {
+      "id": "ex11-2",
+      "externalId": "ex11-2",
+      "name": "Crobat δ",
+      "set": "Delta Species",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex11/2.png",
+      "marketPriceUSD": "2.06"
+    },
+    {
+      "id": "pop6-2",
+      "externalId": "pop6-2",
+      "name": "Lucario",
+      "set": "POP Series 6",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop6/2.png",
+      "marketPriceUSD": "2.84"
+    },
+    {
+      "id": "base4-2",
+      "externalId": "base4-2",
+      "name": "Blastoise",
+      "set": "Base Set 2",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base4/2.png",
+      "marketPriceUSD": "2.03"
+    },
+    {
+      "id": "gym1-2",
+      "externalId": "gym1-2",
+      "name": "Brock's Rhydon",
+      "set": "Gym Heroes",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym1/2.png",
+      "marketPriceUSD": "1.23"
+    },
+    {
+      "id": "hgss1-2",
+      "externalId": "hgss1-2",
+      "name": "Azumarill",
+      "set": "HeartGold & SoulSilver",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss1/2.png",
+      "marketPriceUSD": "2.41"
+    },
+    {
+      "id": "det1-2",
+      "externalId": "det1-2",
+      "name": "Ludicolo",
+      "set": "Detective Pikachu",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/det1/2.png",
+      "marketPriceUSD": "1.59"
+    },
+    {
+      "id": "ex12-2",
+      "externalId": "ex12-2",
+      "name": "Aggron",
+      "set": "Legend Maker",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex12/2.png",
+      "marketPriceUSD": "2.89"
+    },
+    {
+      "id": "ex7-2",
+      "externalId": "ex7-2",
+      "name": "Dark Ampharos",
+      "set": "Team Rocket Returns",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex7/2.png",
+      "marketPriceUSD": "1.60"
+    },
+    {
+      "id": "ex14-1",
+      "externalId": "ex14-1",
+      "name": "Banette",
+      "set": "Crystal Guardians",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex14/1.png",
+      "marketPriceUSD": "2.33"
+    },
+    {
+      "id": "sm12-1",
+      "externalId": "sm12-1",
+      "name": "Venusaur & Snivy-GX",
+      "set": "Cosmic Eclipse",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/sm12/1.png",
+      "marketPriceUSD": "2.97"
+    },
+    {
+      "id": "dp1-1",
+      "externalId": "dp1-1",
+      "name": "Dialga",
+      "set": "Diamond & Pearl",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp1/1.png",
+      "marketPriceUSD": "1.60"
+    },
+    {
+      "id": "pop7-1",
+      "externalId": "pop7-1",
+      "name": "Ampharos",
+      "set": "POP Series 7",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop7/1.png",
+      "marketPriceUSD": "1.07"
+    },
+    {
+      "id": "gym2-1",
+      "externalId": "gym2-1",
+      "name": "Blaine's Arcanine",
+      "set": "Gym Challenge",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym2/1.png",
+      "marketPriceUSD": "2.35"
+    },
+    {
+      "id": "col1-1",
+      "externalId": "col1-1",
+      "name": "Clefable",
+      "set": "Call of Legends",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/col1/1.png",
+      "marketPriceUSD": "1.38"
+    },
+    {
+      "id": "ex9-1",
+      "externalId": "ex9-1",
+      "name": "Blaziken",
+      "set": "Emerald",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex9/1.png",
+      "marketPriceUSD": "2.26"
+    },
+    {
+      "id": "swsh35-1",
+      "externalId": "swsh35-1",
+      "name": "Venusaur V",
+      "set": "Champion's Path",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/swsh35/1.png",
+      "marketPriceUSD": "2.14"
+    },
+    {
+      "id": "ex13-1",
+      "externalId": "ex13-1",
+      "name": "Armaldo δ",
+      "set": "Holon Phantoms",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex13/1.png",
+      "marketPriceUSD": "1.58"
+    },
+    {
+      "id": "dv1-2",
+      "externalId": "dv1-2",
+      "name": "Dratini",
+      "set": "Dragon Vault",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dv1/2.png",
+      "marketPriceUSD": "2.48"
+    },
+    {
+      "id": "ecard2-H3",
+      "externalId": "ecard2-H3",
+      "name": "Ariados",
+      "set": "Aquapolis",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ecard2/H3.png",
+      "marketPriceUSD": "1.83"
+    },
+    {
+      "id": "ex9-2",
+      "externalId": "ex9-2",
+      "name": "Deoxys",
+      "set": "Emerald",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex9/2.png",
+      "marketPriceUSD": "2.48"
+    },
+    {
+      "id": "base4-3",
+      "externalId": "base4-3",
+      "name": "Chansey",
+      "set": "Base Set 2",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base4/3.png",
+      "marketPriceUSD": "2.46"
+    },
+    {
+      "id": "xy5-3",
+      "externalId": "xy5-3",
+      "name": "Beedrill",
+      "set": "Primal Clash",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy5/3.png",
+      "marketPriceUSD": "1.46"
+    },
+    {
+      "id": "pop6-3",
+      "externalId": "pop6-3",
+      "name": "Manaphy",
+      "set": "POP Series 6",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop6/3.png",
+      "marketPriceUSD": "1.19"
+    },
+    {
+      "id": "ex11-3",
+      "externalId": "ex11-3",
+      "name": "Dragonite δ",
+      "set": "Delta Species",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex11/3.png",
+      "marketPriceUSD": "1.79"
+    },
+    {
+      "id": "pl3-3",
+      "externalId": "pl3-3",
+      "name": "Drifblim FB",
+      "set": "Supreme Victors",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl3/3.png",
+      "marketPriceUSD": "1.28"
+    },
+    {
+      "id": "base3-3",
+      "externalId": "base3-3",
+      "name": "Ditto",
+      "set": "Fossil",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base3/3.png",
+      "marketPriceUSD": "2.33"
+    },
+    {
+      "id": "hgss1-3",
+      "externalId": "hgss1-3",
+      "name": "Clefable",
+      "set": "HeartGold & SoulSilver",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss1/3.png",
+      "marketPriceUSD": "2.97"
+    },
+    {
+      "id": "ex13-2",
+      "externalId": "ex13-2",
+      "name": "Cradily δ",
+      "set": "Holon Phantoms",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex13/2.png",
+      "marketPriceUSD": "2.13"
+    },
+    {
+      "id": "hgss4-3",
+      "externalId": "hgss4-3",
+      "name": "Celebi",
+      "set": "HS—Triumphant",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss4/3.png",
+      "marketPriceUSD": "0.88"
+    },
+    {
+      "id": "bw10-2",
+      "externalId": "bw10-2",
+      "name": "Masquerain",
+      "set": "Plasma Blast",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/bw10/2.png",
+      "marketPriceUSD": "1.28"
+    },
+    {
+      "id": "ex7-3",
+      "externalId": "ex7-3",
+      "name": "Dark Crobat",
+      "set": "Team Rocket Returns",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex7/3.png",
+      "marketPriceUSD": "1.18"
+    },
+    {
+      "id": "ex12-3",
+      "externalId": "ex12-3",
+      "name": "Cradily",
+      "set": "Legend Maker",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex12/3.png",
+      "marketPriceUSD": "2.45"
+    },
+    {
+      "id": "gym2-2",
+      "externalId": "gym2-2",
+      "name": "Blaine's Charizard",
+      "set": "Gym Challenge",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym2/2.png",
+      "marketPriceUSD": "2.07"
+    },
+    {
+      "id": "xy2-3",
+      "externalId": "xy2-3",
+      "name": "Butterfree",
+      "set": "Flashfire",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy2/3.png",
+      "marketPriceUSD": "1.18"
+    },
+    {
+      "id": "ex3-3",
+      "externalId": "ex3-3",
+      "name": "Crawdaunt",
+      "set": "Dragon",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex3/3.png",
+      "marketPriceUSD": "1.24"
+    },
+    {
+      "id": "dv1-3",
+      "externalId": "dv1-3",
+      "name": "Dragonair",
+      "set": "Dragon Vault",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dv1/3.png",
+      "marketPriceUSD": "2.35"
+    },
+    {
+      "id": "pop7-2",
+      "externalId": "pop7-2",
+      "name": "Gallade",
+      "set": "POP Series 7",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop7/2.png",
+      "marketPriceUSD": "2.90"
+    },
+    {
+      "id": "col1-2",
+      "externalId": "col1-2",
+      "name": "Deoxys",
+      "set": "Call of Legends",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/col1/2.png",
+      "marketPriceUSD": "2.28"
+    },
+    {
+      "id": "pl1-3",
+      "externalId": "pl1-3",
+      "name": "Blaziken",
+      "set": "Platinum",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl1/3.png",
+      "marketPriceUSD": "1.46"
+    },
+    {
+      "id": "gym1-3",
+      "externalId": "gym1-3",
+      "name": "Erika's Clefable",
+      "set": "Gym Heroes",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym1/3.png",
+      "marketPriceUSD": "2.99"
+    },
+    {
+      "id": "dp3-3",
+      "externalId": "dp3-3",
+      "name": "Charizard",
+      "set": "Secret Wonders",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp3/3.png",
+      "marketPriceUSD": "1.16"
+    },
+    {
+      "id": "base5-1",
+      "externalId": "base5-1",
+      "name": "Dark Alakazam",
+      "set": "Team Rocket",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base5/1.png",
+      "marketPriceUSD": "1.19"
+    },
+    {
+      "id": "ex4-1",
+      "externalId": "ex4-1",
+      "name": "Team Aqua's Cacturne",
+      "set": "Team Magma vs Team Aqua",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex4/1.png",
+      "marketPriceUSD": "2.74"
+    },
+    {
+      "id": "bw4-1",
+      "externalId": "bw4-1",
+      "name": "Pinsir",
+      "set": "Next Destinies",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/bw4/1.png",
+      "marketPriceUSD": "2.19"
+    },
+    {
+      "id": "base1-1",
+      "externalId": "base1-1",
+      "name": "Alakazam",
+      "set": "Base",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base1/1.png",
+      "marketPriceUSD": "1.23"
+    },
+    {
+      "id": "pop3-1",
+      "externalId": "pop3-1",
+      "name": "Blastoise",
+      "set": "POP Series 3",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop3/1.png",
+      "marketPriceUSD": "2.25"
+    },
+    {
+      "id": "dp4-1",
+      "externalId": "dp4-1",
+      "name": "Blaziken",
+      "set": "Great Encounters",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp4/1.png",
+      "marketPriceUSD": "1.44"
+    },
+    {
+      "id": "ex8-1",
+      "externalId": "ex8-1",
+      "name": "Altaria",
+      "set": "Deoxys",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex8/1.png",
+      "marketPriceUSD": "2.76"
+    },
+    {
+      "id": "pop5-1",
+      "externalId": "pop5-1",
+      "name": "Ho-Oh",
+      "set": "POP Series 5",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop5/1.png",
+      "marketPriceUSD": "2.06"
+    },
+    {
+      "id": "hgss2-1",
+      "externalId": "hgss2-1",
+      "name": "Jirachi",
+      "set": "HS—Unleashed",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss2/1.png",
+      "marketPriceUSD": "2.56"
+    },
+    {
+      "id": "swsh1-1",
+      "externalId": "swsh1-1",
+      "name": "Celebi V",
+      "set": "Sword & Shield",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/swsh1/1.png",
+      "marketPriceUSD": "2.80"
+    },
+    {
+      "id": "xy1-1",
+      "externalId": "xy1-1",
+      "name": "Venusaur-EX",
+      "set": "XY",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy1/1.png",
+      "marketPriceUSD": "2.12"
+    },
+    {
+      "id": "pop1-1",
+      "externalId": "pop1-1",
+      "name": "Blaziken",
+      "set": "POP Series 1",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop1/1.png",
+      "marketPriceUSD": "3.17"
+    },
+    {
+      "id": "base6-1",
+      "externalId": "base6-1",
+      "name": "Alakazam",
+      "set": "Legendary Collection",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base6/1.png",
+      "marketPriceUSD": "1.67"
+    },
+    {
+      "id": "pop9-1",
+      "externalId": "pop9-1",
+      "name": "Garchomp",
+      "set": "POP Series 9",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop9/1.png",
+      "marketPriceUSD": "2.58"
+    },
+    {
+      "id": "pop4-1",
+      "externalId": "pop4-1",
+      "name": "Chimecho δ",
+      "set": "POP Series 4",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop4/1.png",
+      "marketPriceUSD": "2.81"
+    },
+    {
+      "id": "neo4-1",
+      "externalId": "neo4-1",
+      "name": "Dark Ampharos",
+      "set": "Neo Destiny",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/neo4/1.png",
+      "marketPriceUSD": "2.55"
+    },
+    {
+      "id": "neo3-1",
+      "externalId": "neo3-1",
+      "name": "Ampharos",
+      "set": "Neo Revelation",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/neo3/1.png",
+      "marketPriceUSD": "1.22"
+    },
+    {
+      "id": "pl4-1",
+      "externalId": "pl4-1",
+      "name": "Charizard",
+      "set": "Arceus",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl4/1.png",
+      "marketPriceUSD": "2.19"
+    },
+    {
+      "id": "sm115-3",
+      "externalId": "sm115-3",
+      "name": "Butterfree",
+      "set": "Hidden Fates",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/sm115/3.png",
+      "marketPriceUSD": "2.47"
+    },
+    {
+      "id": "base3-4",
+      "externalId": "base3-4",
+      "name": "Dragonite",
+      "set": "Fossil",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base3/4.png",
+      "marketPriceUSD": "2.27"
+    },
+    {
+      "id": "ex9-3",
+      "externalId": "ex9-3",
+      "name": "Exploud",
+      "set": "Emerald",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex9/3.png",
+      "marketPriceUSD": "3.11"
+    },
+    {
+      "id": "pop7-3",
+      "externalId": "pop7-3",
+      "name": "Latias",
+      "set": "POP Series 7",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop7/3.png",
+      "marketPriceUSD": "3.11"
+    },
+    {
+      "id": "pop6-4",
+      "externalId": "pop6-4",
+      "name": "Pachirisu",
+      "set": "POP Series 6",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop6/4.png",
+      "marketPriceUSD": "0.97"
+    },
+    {
+      "id": "ex4-2",
+      "externalId": "ex4-2",
+      "name": "Team Aqua's Crawdaunt",
+      "set": "Team Magma vs Team Aqua",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex4/2.png",
+      "marketPriceUSD": "3.14"
+    },
+    {
+      "id": "hgss1-4",
+      "externalId": "hgss1-4",
+      "name": "Gyarados",
+      "set": "HeartGold & SoulSilver",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss1/4.png",
+      "marketPriceUSD": "2.38"
+    },
+    {
+      "id": "xy1-2",
+      "externalId": "xy1-2",
+      "name": "M Venusaur-EX",
+      "set": "XY",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy1/2.png",
+      "marketPriceUSD": "2.23"
+    },
+    {
+      "id": "ex8-2",
+      "externalId": "ex8-2",
+      "name": "Beautifly",
+      "set": "Deoxys",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex8/2.png",
+      "marketPriceUSD": "1.15"
+    },
+    {
+      "id": "pop4-2",
+      "externalId": "pop4-2",
+      "name": "Deoxys δ",
+      "set": "POP Series 4",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop4/2.png",
+      "marketPriceUSD": "2.28"
+    },
+    {
+      "id": "xy4-2",
+      "externalId": "xy4-2",
+      "name": "Venomoth",
+      "set": "Phantom Forces",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy4/2.png",
+      "marketPriceUSD": "3.19"
+    },
+    {
+      "id": "col1-3",
+      "externalId": "col1-3",
+      "name": "Dialga",
+      "set": "Call of Legends",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/col1/3.png",
+      "marketPriceUSD": "3.17"
+    },
+    {
+      "id": "ex12-4",
+      "externalId": "ex12-4",
+      "name": "Delcatty",
+      "set": "Legend Maker",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex12/4.png",
+      "marketPriceUSD": "2.31"
+    },
+    {
+      "id": "bw11-2",
+      "externalId": "bw11-2",
+      "name": "Tangrowth",
+      "set": "Legendary Treasures",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/bw11/2.png",
+      "marketPriceUSD": "1.48"
+    },
+    {
+      "id": "pl1-4",
+      "externalId": "pl1-4",
+      "name": "Delcatty",
+      "set": "Platinum",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl1/4.png",
+      "marketPriceUSD": "2.20"
+    },
+    {
+      "id": "base5-2",
+      "externalId": "base5-2",
+      "name": "Dark Arbok",
+      "set": "Team Rocket",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base5/2.png",
+      "marketPriceUSD": "2.94"
+    },
+    {
+      "id": "ecard2-H4",
+      "externalId": "ecard2-H4",
+      "name": "Azumarill",
+      "set": "Aquapolis",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ecard2/H4.png",
+      "marketPriceUSD": "1.47"
+    },
+    {
+      "id": "neo4-2",
+      "externalId": "neo4-2",
+      "name": "Dark Crobat",
+      "set": "Neo Destiny",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/neo4/2.png",
+      "marketPriceUSD": "2.29"
+    },
+    {
+      "id": "ex3-4",
+      "externalId": "ex3-4",
+      "name": "Flygon",
+      "set": "Dragon",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex3/4.png",
+      "marketPriceUSD": "3.06"
+    },
+    {
+      "id": "pop5-2",
+      "externalId": "pop5-2",
+      "name": "Lugia",
+      "set": "POP Series 5",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop5/2.png",
+      "marketPriceUSD": "2.43"
+    },
+    {
+      "id": "base6-2",
+      "externalId": "base6-2",
+      "name": "Articuno",
+      "set": "Legendary Collection",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base6/2.png",
+      "marketPriceUSD": "2.10"
+    },
+    {
+      "id": "dv1-4",
+      "externalId": "dv1-4",
+      "name": "Dragonair",
+      "set": "Dragon Vault",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dv1/4.png",
+      "marketPriceUSD": "1.00"
+    },
+    {
+      "id": "ex11-4",
+      "externalId": "ex11-4",
+      "name": "Espeon δ",
+      "set": "Delta Species",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex11/4.png",
+      "marketPriceUSD": "2.25"
+    },
+    {
+      "id": "dp4-2",
+      "externalId": "dp4-2",
+      "name": "Cresselia",
+      "set": "Great Encounters",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp4/2.png",
+      "marketPriceUSD": "3.18"
+    },
+    {
+      "id": "dp1-2",
+      "externalId": "dp1-2",
+      "name": "Dusknoir",
+      "set": "Diamond & Pearl",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp1/2.png",
+      "marketPriceUSD": "2.44"
+    },
+    {
+      "id": "gym2-3",
+      "externalId": "gym2-3",
+      "name": "Brock's Ninetales",
+      "set": "Gym Challenge",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/gym2/3.png",
+      "marketPriceUSD": "1.67"
+    },
+    {
+      "id": "pop1-2",
+      "externalId": "pop1-2",
+      "name": "Metagross",
+      "set": "POP Series 1",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop1/2.png",
+      "marketPriceUSD": "2.10"
+    },
+    {
+      "id": "dp3-4",
+      "externalId": "dp3-4",
+      "name": "Entei",
+      "set": "Secret Wonders",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp3/4.png",
+      "marketPriceUSD": "1.01"
+    },
+    {
+      "id": "base4-4",
+      "externalId": "base4-4",
+      "name": "Charizard",
+      "set": "Base Set 2",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base4/4.png",
+      "marketPriceUSD": "2.24"
+    },
+    {
+      "id": "pl4-2",
+      "externalId": "pl4-2",
+      "name": "Froslass",
+      "set": "Arceus",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl4/2.png",
+      "marketPriceUSD": "1.66"
+    },
+    {
+      "id": "pop3-2",
+      "externalId": "pop3-2",
+      "name": "Flareon",
+      "set": "POP Series 3",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop3/2.png",
+      "marketPriceUSD": "1.45"
+    },
+    {
+      "id": "pop9-2",
+      "externalId": "pop9-2",
+      "name": "Manaphy",
+      "set": "POP Series 9",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop9/2.png",
+      "marketPriceUSD": "3.13"
+    },
+    {
+      "id": "xy7-3",
+      "externalId": "xy7-3",
+      "name": "Vileplume",
+      "set": "Ancient Origins",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/xy7/3.png",
+      "marketPriceUSD": "2.81"
+    },
+    {
+      "id": "hgss4-4",
+      "externalId": "hgss4-4",
+      "name": "Drapion",
+      "set": "HS—Triumphant",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss4/4.png",
+      "marketPriceUSD": "2.79"
+    },
+    {
+      "id": "ex13-3",
+      "externalId": "ex13-3",
+      "name": "Deoxys δ",
+      "set": "Holon Phantoms",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex13/3.png",
+      "marketPriceUSD": "2.31"
+    },
+    {
+      "id": "ex10-1",
+      "externalId": "ex10-1",
+      "name": "Ampharos",
+      "set": "Unseen Forces",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex10/1.png",
+      "marketPriceUSD": "1.78"
+    },
+    {
+      "id": "bw5-3",
+      "externalId": "bw5-3",
+      "name": "Venusaur",
+      "set": "Dark Explorers",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/bw5/3.png",
+      "marketPriceUSD": "1.65"
+    },
+    {
+      "id": "dp1-3",
+      "externalId": "dp1-3",
+      "name": "Electivire",
+      "set": "Diamond & Pearl",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/dp1/3.png",
+      "marketPriceUSD": "1.97"
+    },
+    {
+      "id": "hgss4-5",
+      "externalId": "hgss4-5",
+      "name": "Mamoswine",
+      "set": "HS—Triumphant",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss4/5.png",
+      "marketPriceUSD": "2.70"
+    },
+    {
+      "id": "ex7-4",
+      "externalId": "ex7-4",
+      "name": "Dark Electrode",
+      "set": "Team Rocket Returns",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex7/4.png",
+      "marketPriceUSD": "0.91"
+    },
+    {
+      "id": "pl3-4",
+      "externalId": "pl3-4",
+      "name": "Electivire FB",
+      "set": "Supreme Victors",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl3/4.png",
+      "marketPriceUSD": "1.81"
+    },
+    {
+      "id": "hgss1-5",
+      "externalId": "hgss1-5",
+      "name": "Hitmontop",
+      "set": "HeartGold & SoulSilver",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/hgss1/5.png",
+      "marketPriceUSD": "1.49"
+    },
+    {
+      "id": "ex12-5",
+      "externalId": "ex12-5",
+      "name": "Gengar",
+      "set": "Legend Maker",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex12/5.png",
+      "marketPriceUSD": "1.22"
+    },
+    {
+      "id": "pl4-3",
+      "externalId": "pl4-3",
+      "name": "Heatran",
+      "set": "Arceus",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pl4/3.png",
+      "marketPriceUSD": "1.67"
+    },
+    {
+      "id": "bw10-4",
+      "externalId": "bw10-4",
+      "name": "Cradily",
+      "set": "Plasma Blast",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/bw10/4.png",
+      "marketPriceUSD": "1.87"
+    },
+    {
+      "id": "pop4-3",
+      "externalId": "pop4-3",
+      "name": "Flygon",
+      "set": "POP Series 4",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/pop4/3.png",
+      "marketPriceUSD": "2.12"
+    },
+    {
+      "id": "ex3-5",
+      "externalId": "ex3-5",
+      "name": "Golem",
+      "set": "Dragon",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex3/5.png",
+      "marketPriceUSD": "2.75"
+    },
+    {
+      "id": "ex9-4",
+      "externalId": "ex9-4",
+      "name": "Gardevoir",
+      "set": "Emerald",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex9/4.png",
+      "marketPriceUSD": "1.28"
+    },
+    {
+      "id": "ex11-5",
+      "externalId": "ex11-5",
+      "name": "Flareon δ",
+      "set": "Delta Species",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex11/5.png",
+      "marketPriceUSD": "2.34"
+    },
+    {
+      "id": "ex4-3",
+      "externalId": "ex4-3",
+      "name": "Team Aqua's Kyogre",
+      "set": "Team Magma vs Team Aqua",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/ex4/3.png",
+      "marketPriceUSD": "1.02"
+    },
+    {
+      "id": "base3-5",
+      "externalId": "base3-5",
+      "name": "Gengar",
+      "set": "Fossil",
+      "rarity": "rare",
+      "imageUrl": "https://images.pokemontcg.io/base3/5.png",
+      "marketPriceUSD": "2.04"
+    }
+  ]
+}
