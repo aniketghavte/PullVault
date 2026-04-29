@@ -3,9 +3,10 @@ import { db, schema } from '@/lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { requireUserId } from '@/lib/auth';
 
-export const GET = handler(async (req, { params }: { params: { cardId: string } }) => {
+export const GET = handler(
+  async (req: Request, { params }: { params: Promise<{ cardId: string }> }) => {
   await requireUserId();
-  const { cardId } = params;
+  const { cardId } = await params;
 
   // Fetch the last 30 prices for the card
   const history = await db
@@ -21,5 +22,6 @@ export const GET = handler(async (req, { params }: { params: { cardId: string } 
   // Return in chronological order
   history.reverse();
 
-  return { history };
-});
+    return { history };
+  },
+);
