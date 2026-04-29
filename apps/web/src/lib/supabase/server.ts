@@ -4,8 +4,8 @@ import { cookies } from 'next/headers';
 import { clientEnv, serverEnv } from '../env';
 
 // User-scoped client: respects the user's session via cookies. RLS enforced.
-export function createSupabaseServerClient() {
-  const cookieStore = cookies();
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
   return createServerClient(clientEnv.NEXT_PUBLIC_SUPABASE_URL, clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       get(name: string) {
