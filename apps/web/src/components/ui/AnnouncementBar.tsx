@@ -25,7 +25,7 @@ function getTechnicalNote(pathname: string) {
   }
   
   // Default for home or other pages
-  return 'PullVault Demo: Built with Next.js 14, Postgres (Drizzle), Redis, BullMQ, and Socket.io for realtime concurrency.';
+  return 'PullVault: Built with Next.js, Postgres (Drizzle), Redis, BullMQ, and Socket.io for realtime concurrency.';
 }
 
 export function AnnouncementBar({ className }: { className?: string }) {

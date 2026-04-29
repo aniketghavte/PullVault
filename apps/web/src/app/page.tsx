@@ -59,19 +59,19 @@ export default function HomePage() {
               <div className="p-8 h-full flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="text-monoLabel uppercase tracking-[0.28px] text-mutedSlate">
-                    Agent console mock
+                    Agent console live
                   </div>
                   <h2 className="font-display text-sectionHeading leading-tight tracking-tight">
                     Pack ripping, trade safety, live bidding.
                   </h2>
                   <p className="text-bodyLarge text-ink/70">
-                    This environment is simulated end-to-end so you can click through every
-                    user flow before we wire the real backend.
+                    This platform runs end-to-end on real backend flows so every click maps to
+                    persisted data and realtime events.
                   </p>
                 </div>
 
                 <div className="mt-10">
-                  <AgentConsoleCard title="PackVault Console" status={{ label: 'LIVE (mock)', tone: 'green' }} badges={['Drop countdown', 'Reveal sequence', 'Auction timer']}>
+                  <AgentConsoleCard title="PackVault Console" status={{ label: 'LIVE', tone: 'green' }} badges={['Drop countdown', 'Reveal sequence', 'Auction timer']}>
                     <div className="space-y-2 text-bodyLarge text-canvas/90">
                       <div className="flex gap-3">
                         <span className="text-mutedSlate">Next action</span>
@@ -122,7 +122,7 @@ export default function HomePage() {
             />
             <CapabilityCard
               title="Atomic trades"
-              description="A listing buy is simulated as an atomic transfer: card and money move together."
+              description="A listing buy executes as an atomic transfer: card and money move together."
               href="/marketplace"
               linkLabel="Browse listings"
             />
@@ -139,7 +139,7 @@ export default function HomePage() {
             <div className="rounded-lg border border-cardBorder bg-white/40 p-6">
               <div className="text-featureHeading font-semibold">Countdown UX</div>
               <p className="mt-2 text-bodyLarge text-ink/70">
-                Timers tick via a simulated server clock. Display is never guessed.
+                Timers are server-authoritative and stream live updates. Display is never guessed.
               </p>
             </div>
             <div className="rounded-lg border border-cardBorder bg-white/40 p-6">
@@ -151,7 +151,7 @@ export default function HomePage() {
             <div className="rounded-lg border border-cardBorder bg-white/40 p-6">
               <div className="text-featureHeading font-semibold">Market valuation</div>
               <p className="mt-2 text-bodyLarge text-ink/70">
-                Portfolio value uses the same catalog snapshot used for draws.
+                Portfolio value comes from live market prices and updates through realtime ticks.
               </p>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function HomePage() {
               <MonoInvite />
               <p className="text-bodyLarge text-ink/70">
                 Start with a pack purchase, then follow the card into portfolio, marketplace, and auctions.
-                Everything here is simulated UI backed by a mock state engine.
+                Every step is backed by real APIs, database writes, and realtime events.
               </p>
             </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
@@ -186,7 +186,7 @@ export default function HomePage() {
 function MonoInvite() {
   return (
     <div className="text-monoLabel uppercase tracking-[0.28px] text-mutedSlate">
-      Real cards, real prices (simulated).
+      Real cards, real prices.
     </div>
   );
 }

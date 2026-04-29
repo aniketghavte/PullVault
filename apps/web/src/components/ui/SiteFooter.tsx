@@ -37,7 +37,7 @@ export function SiteFooter() {
             <div className="text-micro font-semibold text-canvas/90">Project</div>
             <div className="flex flex-col gap-2 text-body">
               <a
-                href="https://github.com/"
+                href="https://github.com/aniketghavte/PullVault/"
                 target="_blank"
                 rel="noreferrer"
                 className="text-canvas/80 hover:text-canvas underline underline-offset-4 decoration-canvas/20"

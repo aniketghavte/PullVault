@@ -159,7 +159,7 @@ export default function MarketplaceListingDetailPage({ params }: { params: Promi
               <MonoLabel>Active listing</MonoLabel>
               <div className="mt-4 flex gap-6 items-start">
                 <div className="relative h-56 w-56 rounded-sm overflow-hidden bg-stone border border-cardBorder">
-                  {/* Uses remote images; mock uses pokemontcg snapshot */}
+                  {/* Uses remote card images from the catalog source */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {/* eslint-disable-next-line jsx-a11y/alt-text */}
                   {/* eslint-disable-next-line react/no-unescaped-entities */}
