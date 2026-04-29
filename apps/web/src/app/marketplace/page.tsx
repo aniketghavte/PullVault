@@ -131,6 +131,10 @@ export default function MarketplacePage() {
                       <div className="text-micro text-mutedSlate">Asking</div>
                       <div className="text-micro font-semibold text-ink">{formatUSD(listing.priceUSD)}</div>
                     </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-micro text-mutedSlate">Market</div>
+                      <div className="text-micro font-semibold text-ink">{formatUSD(card.marketPriceUSD)}</div>
+                    </div>
                     <div className={`text-micro font-semibold ${tone}`}>
                       {delta.gt(0) ? '+' : ''}
                       {formatUSD(toMoneyString(delta))}

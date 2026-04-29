@@ -1,10 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-
-import { mockApi } from '@/lib/mock/api';
-import type { Drop } from '@/lib/mock/types';
+import { useState } from 'react';
 
 import { AnnouncementBar } from '../components/ui/AnnouncementBar';
 import { AgentConsoleCard } from '../components/ui/AgentConsoleCard';
@@ -15,27 +12,25 @@ import { ProductCard } from '../components/ui/ProductCard';
 import { TrustLogoStrip } from '../components/ui/TrustLogoStrip';
 import { ButtonPrimary } from '../components/ui/ButtonPrimary';
 
-function formatMmSs(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const mm = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${mm}:${String(ss).padStart(2, '0')}`;
-}
-
 export default function HomePage() {
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const now = Date.now();
-
-  useEffect(() => {
-    mockApi.drops.list().then((res) => {
-      if (res.ok) setDrops(res.data);
-    });
-  }, []);
-
-  const nextDrops = useMemo(() => {
-    const sorted = [...drops].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-    return sorted.slice(0, 3);
-  }, [drops]);
+  const [techDetails] = useState([
+    {
+      title: 'Core stack',
+      body: 'Next.js 14 + TypeScript monorepo (apps/web, apps/realtime, packages/db, packages/shared), Supabase Postgres/Auth, Redis pub-sub, and Socket.io.',
+    },
+    {
+      title: 'Data model',
+      body: 'cards + card_prices for valuation, pack_drops + pack_purchases for supply/reveal, user_cards + listings + auctions for trading, and ledger_entries for monetary truth.',
+    },
+    {
+      title: 'Realtime topology',
+      body: 'Web publishes post-commit events to Redis channels; realtime subscribers fan-out to socket rooms. UI reconciles from API and receives live ticks via price:tick.',
+    },
+    {
+      title: 'Correctness rules',
+      body: 'Money uses decimal.js strings, write paths run in DB transactions with row/guard locking, and ledger rows are written in the same transaction as balance/card state changes.',
+    },
+  ]);
 
   return (
     <main className="w-full">
@@ -94,27 +89,13 @@ export default function HomePage() {
 
             <div className="space-y-6">
               <div className="rounded-lg border border-cardBorder bg-canvas p-8">
-                <div className="text-monoLabel uppercase tracking-[0.28px] text-mutedSlate">Drops this week</div>
+                <div className="text-monoLabel uppercase tracking-[0.28px] text-mutedSlate">
+                  Technical details
+                </div>
                 <div className="mt-4 space-y-3">
-                  {nextDrops.map((d) => {
-                    const scheduledMs = new Date(d.scheduledAt).getTime();
-                    const left = scheduledMs - now;
-                    const timeLabel = d.status === 'scheduled' ? formatMmSs(left) : d.status === 'live' ? 'Live' : 'Sold out';
-                    return (
-                      <ProductCard
-                        key={d.dropId}
-                        title={d.tierName}
-                        subtitle={`${d.priceUSD} pack price • ${d.remaining}/${d.totalInventory} remaining`}
-                      >
-                        <div className="flex items-center justify-between gap-4 pt-2">
-                          <div className="text-micro font-semibold text-mutedSlate">{timeLabel}</div>
-                          <Link href={`/drops/${d.dropId}`} className="text-actionBlue underline underline-offset-4 decoration-actionBlue/30 hover:decoration-actionBlue/60">
-                            View
-                          </Link>
-                        </div>
-                      </ProductCard>
-                    );
-                  })}
+                  {techDetails.map((item) => (
+                    <ProductCard key={item.title} title={item.title} subtitle={item.body} />
+                  ))}
                 </div>
               </div>
 
@@ -187,11 +168,11 @@ export default function HomePage() {
                 Everything here is simulated UI backed by a mock state engine.
               </p>
             </div>
-            <div className="flex gap-4">
-              <Link href="/drops" className="rounded-pill bg-nearBlack px-8 py-3 text-button font-semibold text-canvas hover:bg-black transition-colors">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
+              <Link href="/drops" className="rounded-pill bg-nearBlack px-8 py-3 text-button font-semibold text-canvas hover:bg-black transition-colors text-center whitespace-nowrap">
                 Buy your first pack
               </Link>
-              <Link href="/portfolio" className="rounded-pill border border-nearBlack/15 bg-transparent px-8 py-3 text-button font-semibold text-nearBlack hover:bg-nearBlack/[0.03] transition-colors">
+              <Link href="/portfolio" className="rounded-pill border border-nearBlack/15 bg-transparent px-8 py-3 text-button font-semibold text-nearBlack hover:bg-nearBlack/[0.03] transition-colors text-center whitespace-nowrap">
                 View portfolio
               </Link>
             </div>

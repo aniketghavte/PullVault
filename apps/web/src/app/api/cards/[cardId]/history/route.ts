@@ -21,5 +21,5 @@ export const GET = handler(async (req, { params }: { params: { cardId: string } 
   // Return in chronological order
   history.reverse();
 
-  return { ok: true, data: { history } };
+  return { history };
 });

@@ -179,6 +179,10 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
 
             <ResearchTable>
               <ResearchTableRow
+                left={<span className="text-body font-semibold text-mutedSlate">Market</span>}
+                right={<span className="text-body font-semibold">{formatUSD(card.marketPriceUSD)}</span>}
+              />
+              <ResearchTableRow
                 left={<span className="text-body font-semibold text-mutedSlate">Fee</span>}
                 center={<span className="text-body text-canvas/85" />}
                 right={<span className="text-body font-semibold">{formatUSD(fee)}</span>}
