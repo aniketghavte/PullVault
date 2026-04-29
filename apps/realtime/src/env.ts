@@ -30,4 +30,11 @@ const schema = z.object({
   LOG_LEVEL: z.string().default('info'),
 });
 
-export const env = schema.parse(process.env);
+// Railway injects `PORT` by default. If REALTIME_PORT is not set,
+// use PORT so the service binds to the expected public listener.
+const envInput = {
+  ...process.env,
+  REALTIME_PORT: process.env.REALTIME_PORT ?? process.env.PORT,
+};
+
+export const env = schema.parse(envInput);
