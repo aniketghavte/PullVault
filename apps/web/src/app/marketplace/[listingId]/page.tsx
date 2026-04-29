@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { PLATFORM } from '@pullvault/shared/constants';
@@ -31,9 +31,9 @@ interface ListingDetail {
   };
 }
 
-export default function MarketplaceListingDetailPage({ params }: { params: { listingId: string } }) {
+export default function MarketplaceListingDetailPage({ params }: { params: Promise<{ listingId: string }> }) {
   const router = useRouter();
-  const { listingId } = params;
+  const { listingId } = use(params);
 
   const [data, setData] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);

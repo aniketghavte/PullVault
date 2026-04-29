@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { AUCTION_DURATIONS_MINUTES, PLATFORM } from '@pullvault/shared/constants';
@@ -30,9 +30,9 @@ interface DetailData {
   activeAuction: { auctionId: string } | null;
 }
 
-export default function PortfolioCardDetailPage({ params }: { params: { userCardId: string } }) {
+export default function PortfolioCardDetailPage({ params }: { params: Promise<{ userCardId: string }> }) {
   const router = useRouter();
-  const { userCardId } = params;
+  const { userCardId } = use(params);
 
   const [data, setData] = useState<DetailData | null>(null);
   const [history, setHistory] = useState<{ priceUsd: string, fetchedAt: string }[]>([]);

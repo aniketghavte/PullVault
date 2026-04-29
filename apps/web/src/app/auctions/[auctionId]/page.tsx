@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { PLATFORM } from '@pullvault/shared/constants';
@@ -61,8 +61,8 @@ interface AuctionDetail {
   };
 }
 
-export default function AuctionRoomPage({ params }: { params: { auctionId: string } }) {
-  const { auctionId } = params;
+export default function AuctionRoomPage({ params }: { params: Promise<{ auctionId: string }> }) {
+  const { auctionId } = use(params);
   const router = useRouter();
   const nowMs = useLiveClock();
 
