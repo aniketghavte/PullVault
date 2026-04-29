@@ -1,17 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { mockApi } from '@/lib/mock/api';
-import { useMockStore } from '@/lib/mock/store';
-import { useServerClock } from '@/lib/mock/clock';
-import type { Drop } from '@/lib/mock/types';
+import type { DropState } from '@pullvault/shared';
+import { getSocket } from '@/lib/socket-client';
 
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 import { MonoLabel } from '@/components/ui/MonoLabel';
 import { ProductCard } from '@/components/ui/ProductCard';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function formatMmSs(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -35,41 +37,182 @@ function InventoryBar({ remaining, total }: { remaining: number; total: number }
   );
 }
 
+// ---------------------------------------------------------------------------
+// useLiveClock — ticks every second for countdown display
+// ---------------------------------------------------------------------------
+
+function useLiveClock() {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function DropsPage() {
   const router = useRouter();
-  const nowMs = useServerClock({ syncMockEngine: true });
-  const drops = useMockStore((s) => s.drops);
+  const nowMs = useLiveClock();
+  const [drops, setDrops] = useState<DropState[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busyDropId, setBusyDropId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const socketRef = useRef(false);
 
-  const orderedDrops = useMemo(() => {
-    return [...drops].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
-  }, [drops]);
+  // Fetch drops from real API
+  const fetchDrops = useCallback(async () => {
+    try {
+      const res = await fetch('/api/drops');
+      const json = await res.json();
+      if (json.ok) {
+        setDrops(json.data.drops);
+      } else {
+        setError(json.error?.message ?? 'Failed to load drops');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const buy = async (drop: Drop) => {
+  useEffect(() => {
+    fetchDrops();
+  }, [fetchDrops]);
+
+  // Subscribe to Socket.io drop rooms for live inventory updates
+  useEffect(() => {
+    if (drops.length === 0 || socketRef.current) return;
+
+    try {
+      const socket = getSocket();
+      socketRef.current = true;
+
+      // Join rooms for all active drops
+      for (const d of drops) {
+        if (d.status === 'live' || d.status === 'scheduled') {
+          socket.emit('drop:join', { dropId: d.dropId });
+        }
+      }
+
+      // Listen for inventory updates
+      socket.on('drop:inventory', (payload: { dropId: string; remaining: number }) => {
+        setDrops((prev) =>
+          prev.map((d) =>
+            d.dropId === payload.dropId ? { ...d, remaining: payload.remaining } : d,
+          ),
+        );
+      });
+
+      // Listen for sold-out events
+      socket.on('drop:sold_out', (payload: { dropId: string }) => {
+        setDrops((prev) =>
+          prev.map((d) =>
+            d.dropId === payload.dropId ? { ...d, status: 'sold_out', remaining: 0 } : d,
+          ),
+        );
+      });
+
+      return () => {
+        for (const d of drops) {
+          socket.emit('drop:leave', { dropId: d.dropId });
+        }
+        socket.off('drop:inventory');
+        socket.off('drop:sold_out');
+        socketRef.current = false;
+      };
+    } catch {
+      // Socket.io not available — fallback to polling
+    }
+  }, [drops.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Buy handler — calls real API
+  const buy = async (drop: DropState) => {
     setBusyDropId(drop.dropId);
+    setError(null);
     try {
       const idempotencyKey = crypto.randomUUID();
-      const res = await mockApi.drops.buyPack(drop.dropId, idempotencyKey);
-      if (!res.ok) {
-        alert(res.error.message);
-        return;
+      const res = await fetch(`/api/drops/${drop.dropId}/purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idempotencyKey }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        router.push(`/packs/${json.data.purchaseId}/reveal`);
+      } else {
+        const msg = json.error?.message ?? 'Purchase failed';
+        setError(msg);
+        // Refresh drops to get current state
+        fetchDrops();
       }
-      router.push(`/packs/${res.data.purchaseId}/reveal`);
+    } catch {
+      setError('Network error — please try again.');
     } finally {
       setBusyDropId(null);
     }
   };
+
+  const orderedDrops = useMemo(() => {
+    return [...drops].sort(
+      (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+    );
+  }, [drops]);
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="space-y-3 pb-8">
+            <MonoLabel>Pack Drops</MonoLabel>
+            <h1 className="font-display text-sectionDisplay tracking-tight leading-none">
+              Loading drops…
+            </h1>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="px-4 pt-10 pb-16">
       <div className="mx-auto w-full max-w-7xl">
         <div className="space-y-3 pb-8">
           <MonoLabel>Pack Drops</MonoLabel>
-          <h1 className="font-display text-sectionDisplay tracking-tight leading-none">Limited inventory, scheduled tension.</h1>
+          <h1 className="font-display text-sectionDisplay tracking-tight leading-none">
+            Limited inventory, real-time tension.
+          </h1>
           <p className="text-bodyLarge text-ink/70">
-            Drops go live at scheduled times. Inventory decrements instantly in the mock engine.
+            Drops go live at scheduled times. Inventory decrements are atomic and
+            broadcast in real-time.
           </p>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {orderedDrops.length === 0 && (
+          <div className="text-center py-16 text-mutedSlate text-bodyLarge">
+            No drops available.{' '}
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch('/api/admin/seed-drops', { method: 'POST' });
+                fetchDrops();
+              }}
+              className="text-actionBlue underline underline-offset-4"
+            >
+              Seed test drops
+            </button>
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {orderedDrops.map((d) => {
@@ -85,7 +228,11 @@ export default function DropsPage() {
                     : 'Closed';
 
             return (
-              <ProductCard key={d.dropId} title={d.tierName} subtitle={`${d.priceUSD} pack • ${d.remaining}/${d.totalInventory} remaining`}>
+              <ProductCard
+                key={d.dropId}
+                title={d.tierName}
+                subtitle={`$${d.priceUSD} pack • ${d.remaining}/${d.totalInventory} remaining`}
+              >
                 <div className="space-y-4">
                   <div className="text-micro font-semibold text-mutedSlate">{statusLabel}</div>
                   <InventoryBar remaining={d.remaining} total={d.totalInventory} />
@@ -97,7 +244,7 @@ export default function DropsPage() {
                         disabled={busyDropId === d.dropId}
                         className="w-full justify-center"
                       >
-                        Buy 1 pack — {d.priceUSD}
+                        {busyDropId === d.dropId ? 'Buying…' : `Buy 1 pack — $${d.priceUSD}`}
                       </ButtonPrimary>
                     </div>
                   ) : (
@@ -108,7 +255,7 @@ export default function DropsPage() {
 
                   <div className="pt-2 flex items-center justify-between gap-4">
                     <div className="text-micro text-mutedSlate">
-                      Drop ID: <span className="text-ink">{d.dropId}</span>
+                      Drop ID: <span className="text-ink">{d.dropId.slice(0, 8)}…</span>
                     </div>
                     <button
                       type="button"

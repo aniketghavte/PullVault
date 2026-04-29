@@ -2,10 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-
-import { useServerClock } from '@/lib/mock/clock';
-import { useMockStore } from '@/lib/mock/store';
+import { useMemo, useState, useEffect } from 'react';
 
 import { BlogFilterChip } from '@/components/ui/BlogFilterChip';
 import { MonoLabel } from '@/components/ui/MonoLabel';
@@ -15,28 +12,65 @@ import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
 type RarityFilter = 'all' | 'common' | 'uncommon' | 'rare' | 'ultra_rare' | 'secret_rare';
 
+interface MarketplaceListing {
+  listingId: string;
+  userCardId: string;
+  sellerId: string;
+  sellerHandle: string;
+  priceUSD: string;
+  status: string;
+  card: {
+    id: string;
+    name: string;
+    set: string;
+    rarity: string;
+    imageUrl: string;
+    marketPriceUSD: string;
+  };
+}
+
 export default function MarketplacePage() {
-  useServerClock();
-  const listings = useMockStore((s) => s.listings);
-  const userCards = useMockStore((s) => s.userCards);
-  const meId = useMockStore((s) => s.me.id);
+  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [meId, setMeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok && json.data.user) {
+          setMeId(json.data.user.id);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/listings')
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok && json.data.listings) {
+          setListings(json.data.listings);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const [rarity, setRarity] = useState<RarityFilter>('all');
-  const active = useMemo(() => {
-    const cardsById = new Map(userCards.map((c) => [c.userCardId, c]));
-    return listings
-      .filter((l) => l.status === 'active')
-      .map((l) => {
-        const card = cardsById.get(l.userCardId);
-        return card ? { listing: l, card } : null;
-      })
-      .filter(Boolean) as Array<{ listing: typeof listings[number]; card: typeof userCards[number] }>;
-  }, [listings, userCards]);
 
   const filtered = useMemo(() => {
-    if (rarity === 'all') return active;
-    return active.filter((x) => x.card.rarity === rarity);
-  }, [active, rarity]);
+    if (rarity === 'all') return listings;
+    return listings.filter((l) => l.card.rarity === rarity);
+  }, [listings, rarity]);
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-7xl">
+          <MonoLabel>Loading marketplace...</MonoLabel>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="px-4 pt-10 pb-16">
@@ -45,8 +79,7 @@ export default function MarketplacePage() {
           <MonoLabel>Marketplace</MonoLabel>
           <h1 className="font-display text-sectionDisplay tracking-tight leading-none">Trade for value.</h1>
           <p className="text-bodyLarge text-ink/70">
-            Listings are active bids from other collectors (and your own, if you list). Buy moves
-            atomically in the mock engine.
+            Active listings from other collectors. Buy and sell securely.
           </p>
         </div>
 
@@ -72,7 +105,8 @@ export default function MarketplacePage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {filtered.map(({ listing, card }) => {
+          {filtered.map((listing) => {
+            const card = listing.card;
             const sellerOwns = listing.sellerId === meId;
             const ask = money(listing.priceUSD);
             const market = money(card.marketPriceUSD);

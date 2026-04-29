@@ -1,13 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { useMockStore } from '@/lib/mock/store';
-import { useServerClock } from '@/lib/mock/clock';
-import { mockApi } from '@/lib/mock/api';
-import { formatUSD, money, sub, add, toMoneyString } from '@pullvault/shared/money';
+import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
@@ -31,11 +28,56 @@ function rarityLabel(rarity: string) {
   }
 }
 
+interface DrawnCard {
+  rarity: string;
+  drawPriceUSD: string;
+  card: {
+    name: string;
+    set: string;
+    rarity: string;
+    imageUrl: string;
+    marketPriceUSD: string;
+  };
+}
+
+interface PurchaseData {
+  purchaseId: string;
+  dropId: string;
+  tierCode: string;
+  pricePaidUSD: string;
+  sealed: boolean;
+  revealedCount: number;
+  drawnCards: DrawnCard[];
+}
+
 export default function PackRevealPage({ params }: { params: { purchaseId: string } }) {
+  const { purchaseId } = params;
   const router = useRouter();
-  const _nowMs = useServerClock();
-  const purchase = useMockStore((s) => s.purchases.find((p) => p.purchaseId === params.purchaseId));
+  
+  const [purchase, setPurchase] = useState<PurchaseData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  
+  const fetchPurchase = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/packs/${purchaseId}`);
+      const json = await res.json();
+      if (json.ok) {
+        setPurchase(json.data);
+      } else {
+        setError(json.error?.message ?? 'Purchase not found');
+      }
+    } catch {
+      setError('Failed to load pack details');
+    } finally {
+      setLoading(false);
+    }
+  }, [purchaseId]);
+
+  useEffect(() => {
+    fetchPurchase();
+  }, [fetchPurchase]);
 
   const drawnCards = purchase?.drawnCards ?? [];
   const revealedCount = purchase?.revealedCount ?? 0;
@@ -63,8 +105,19 @@ export default function PackRevealPage({ params }: { params: { purchaseId: strin
     if (busy) return;
     setBusy(true);
     try {
-      const res = await mockApi.packs.reveal(purchase.purchaseId, 0);
-      if (!res.ok) alert(res.error.message);
+      const res = await fetch(`/api/packs/${purchaseId}/reveal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: 0 }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setPurchase(prev => prev ? { ...prev, revealedCount: json.data.revealedCount } : prev);
+      } else {
+        alert(json.error?.message ?? 'Failed to reveal');
+      }
+    } catch {
+      alert('Network error');
     } finally {
       setBusy(false);
     }
@@ -76,18 +129,40 @@ export default function PackRevealPage({ params }: { params: { purchaseId: strin
     const pos = purchase.revealedCount;
     setBusy(true);
     try {
-      const res = await mockApi.packs.reveal(purchase.purchaseId, pos);
-      if (!res.ok) alert(res.error.message);
+      const res = await fetch(`/api/packs/${purchaseId}/reveal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: pos }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setPurchase(prev => prev ? { ...prev, revealedCount: json.data.revealedCount } : prev);
+      } else {
+        alert(json.error?.message ?? 'Failed to reveal');
+      }
+    } catch {
+      alert('Network error');
     } finally {
       setBusy(false);
     }
   };
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-3xl">
+          <MonoLabel>Loading pack...</MonoLabel>
+        </div>
+      </section>
+    );
+  }
 
   if (!purchase) {
     return (
       <section className="px-4 pt-10 pb-16">
         <div className="mx-auto w-full max-w-3xl">
           <MonoLabel>Purchase not found</MonoLabel>
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
       </section>
     );

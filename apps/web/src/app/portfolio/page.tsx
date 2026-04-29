@@ -2,16 +2,28 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import { useServerClock } from '@/lib/mock/clock';
-import { useMockStore } from '@/lib/mock/store';
-import { formatUSD, money, toMoneyString, sub } from '@pullvault/shared/money';
+import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 import { MonoLabel } from '@/components/ui/MonoLabel';
+import { getSocket } from '@/lib/socket-client';
 
 type SortMode = 'newest' | 'highest' | 'gainer';
+
+interface PortfolioCard {
+  userCardId: string;
+  status: string;
+  acquiredPriceUSD: string;
+  acquiredAt: string;
+  cardId: string;
+  name: string;
+  set: string;
+  rarity: string;
+  imageUrl: string;
+  marketPriceUSD: string;
+}
 
 function rarityRank(r: string) {
   switch (r) {
@@ -31,14 +43,43 @@ function rarityRank(r: string) {
 }
 
 export default function PortfolioPage() {
-  useServerClock();
-  const userCards = useMockStore((s) => s.userCards);
-  const meId = useMockStore((s) => s.me.id);
+  const [userCards, setUserCards] = useState<PortfolioCard[]>([]);
+  const [availableBalanceUSD, setAvailableBalanceUSD] = useState('0.00');
+  const [heldBalanceUSD, setHeldBalanceUSD] = useState('0.00');
+  const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortMode>('highest');
 
+  const fetchPortfolio = useCallback(() => {
+    fetch('/api/portfolio')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.ok && json.data.portfolio) {
+          setUserCards(json.data.portfolio);
+          setAvailableBalanceUSD(json.data.availableBalanceUSD ?? '0.00');
+          setHeldBalanceUSD(json.data.heldBalanceUSD ?? '0.00');
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchPortfolio();
+  }, [fetchPortfolio]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    
+    // The server emits 'portfolio:invalidate' when our cards change
+    socket.on('portfolio:invalidate', fetchPortfolio);
+    return () => {
+      socket.off('portfolio:invalidate', fetchPortfolio);
+    };
+  }, [fetchPortfolio]);
+
   const cards = useMemo(
-    () => userCards.filter((uc) => uc.ownerId === meId && uc.status === 'held'),
-    [userCards, meId],
+    () => userCards.filter((uc) => uc.status === 'held'),
+    [userCards],
   );
 
   const totalValueUSD = useMemo(() => {
@@ -50,6 +91,10 @@ export default function PortfolioPage() {
       cards.reduce((acc, c) => acc.plus(money(c.marketPriceUSD).minus(money(c.acquiredPriceUSD))), money(0)),
     );
   }, [cards]);
+  const totalBalanceUSD = useMemo(
+    () => toMoneyString(money(availableBalanceUSD).plus(money(heldBalanceUSD))),
+    [availableBalanceUSD, heldBalanceUSD],
+  );
 
   const filteredSorted = useMemo(() => {
     const list = [...cards];
@@ -69,6 +114,16 @@ export default function PortfolioPage() {
     return map;
   }, [cards]);
 
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-7xl">
+          <MonoLabel>Loading portfolio...</MonoLabel>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="px-4 pt-10 pb-16">
       <div className="mx-auto w-full max-w-7xl space-y-10">
@@ -77,16 +132,38 @@ export default function PortfolioPage() {
             <MonoLabel>Your portfolio</MonoLabel>
             <h1 className="font-display text-sectionDisplay tracking-tight leading-none">Card net worth</h1>
             <p className="text-bodyLarge text-ink/70">
-              Live valuation from the mock catalog. Actions update state instantly.
+              Live valuation based on current market prices.
             </p>
           </div>
 
-          <div className="rounded-lg border border-cardBorder bg-paleGreenWash p-6 w-full lg:w-auto">
-            <div className="text-micro text-mutedSlate">Total value</div>
+          <div className="rounded-lg border border-cardBorder bg-paleGreenWash p-6 w-full lg:w-auto min-w-[320px]">
+            <div className="text-micro text-mutedSlate">Card value</div>
             <div className="mt-2 font-display text-sectionHeading">{formatUSD(totalValueUSD)}</div>
-            <div className={`mt-1 text-micro ${money(unrealizedPnlUSD).gt(0) ? 'text-deepEnterpriseGreen' : money(unrealizedPnlUSD).lt(0) ? 'text-errorRed' : 'text-mutedSlate'}`}>
-              24h delta (mock P&L): {money(unrealizedPnlUSD).gt(0) ? '+' : ''}
+            <div
+              className={`mt-1 text-micro ${
+                money(unrealizedPnlUSD).gt(0)
+                  ? 'text-deepEnterpriseGreen'
+                  : money(unrealizedPnlUSD).lt(0)
+                    ? 'text-errorRed'
+                    : 'text-mutedSlate'
+              }`}
+            >
+              Unrealized P&L: {money(unrealizedPnlUSD).gt(0) ? '+' : ''}
               {formatUSD(unrealizedPnlUSD)}
+            </div>
+            <div className="mt-4 border-t border-cardBorder pt-3 space-y-1 text-micro">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-mutedSlate">Available balance</span>
+                <span className="font-semibold text-ink">{formatUSD(availableBalanceUSD)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-mutedSlate">Held balance</span>
+                <span className="font-semibold text-ink">{formatUSD(heldBalanceUSD)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-mutedSlate">Total balance</span>
+                <span className="font-semibold text-ink">{formatUSD(totalBalanceUSD)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -167,8 +244,7 @@ export default function PortfolioPage() {
             <div className="rounded-lg border border-cardBorder bg-paleBlueWash p-6">
               <div className="text-featureHeading font-semibold">Next actions</div>
               <p className="mt-2 text-bodyLarge text-ink/70">
-                Pick a card to list for sale or start a live auction. The mock state engine enforces
-                card status rules.
+                Pick a card to list for sale or start a live auction.
               </p>
               <div className="pt-4">
                 <Link href="/marketplace" className="text-actionBlue underline underline-offset-4 decoration-actionBlue/30 hover:decoration-actionBlue/60">

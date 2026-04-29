@@ -54,18 +54,46 @@ Files to wire:
 
 Why first: every P0 write path needs a real `userId`.
 
-### 2. Card catalog + price engine - make valuation “alive”
+### 2. Card catalog + price engine - make valuation “alive” ✅
 
-Replace the bundled snapshot with real price refresh:
+The bundled snapshot has been replaced by a real price pipeline:
 
-- Add/enable the catalog refresh action:
-  - `POST /admin/catalog/refresh` (or existing route) that triggers the realtime `price-refresh` job.
+- `POST /api/admin/catalog/refresh` (auth required) — forwards to the realtime
+  app's trusted internal endpoint (`x-realtime-token` header) which enqueues a
+  BullMQ job on `pv_queue_price_refresh`. Modes: `seed | full | hot`.
+- BullMQ worker (`apps/realtime/src/queues/price-refresh.ts`) calls
+  `apps/realtime/src/jobs/price-pipeline.ts`:
+  - `runFullRefresh` paginates the Pokemon TCG API, upserts rows in
+    `cards` keyed on `external_id`, appends history rows in `card_prices`
+    inside one DB transaction, and publishes a tick batch on
+    `pv:prices:ticks`.
+  - `runHotRefresh` walks prices for cards referenced by live listings,
+    auctions, and recent purchases (or random catalog rows as fallback)
+    so the channel never goes silent.
+  - `runSeedIfEmpty` runs a `full` only when `cards` is empty (used on
+    bootstrap when `CATALOG_AUTOSEED=true`, the default).
+- Public read API: `GET /api/cards?rarity=&q=&limit=&offset=` reads from
+  `cards` (denormalized `market_price_usd` is the live valuation).
+- `GET /api/admin/catalog/stats` returns row counts, by-rarity breakdown,
+  and last write timestamps.
+- `/admin/catalog` page now triggers the real worker, polls live stats,
+  and listens to the `price:tick` Socket.io event so the live preview
+  flashes in real time.
 
-UI mapping:
-- The reveal and portfolio valuation should show `cards.market_price_usd` and `card_prices`-backed updates.
+Files involved:
+- `apps/realtime/src/jobs/price-pipeline.ts` (new)
+- `apps/realtime/src/queues/price-refresh.ts`
+- `apps/realtime/src/routes/internal.ts` (`POST /internal/jobs/price-refresh`)
+- `apps/web/src/lib/realtime/internal.ts` (new — token-authed client)
+- `apps/web/src/app/api/admin/catalog/refresh/route.ts` (new)
+- `apps/web/src/app/api/admin/catalog/stats/route.ts` (new)
+- `apps/web/src/app/api/cards/route.ts` (new)
+- `apps/web/src/app/admin/catalog/page.tsx`
 
-Files to wire:
-- Repoint `/admin/catalog` button to the realtime/BullMQ price refresh job.
+Next-step UI mapping (slices 3–5):
+- Reveal + portfolio should read `cards.market_price_usd` (already the
+  authoritative valuation surface) and reuse the `price:tick` socket
+  payload for live updates.
 
 ### 3. Pack drops (P0 concurrency) - real inventory decrement
 
@@ -141,18 +169,18 @@ Files to wire:
   - `pv.bid.accepted`
   - `pv.auction.settled`
 
-### 8. Admin economics - compute from ledger + real market prices
+### 8. Admin economics - compute from ledger + real market prices ✅
 
-Replace admin economics:
+Admin economics now reads real aggregates:
 
-- `pack EV per tier` computed from:
-  - current `cards.market_price_usd`
-  - pack rarity weights
-- Revenue streams use:
-  - ledger entries for platform fees
+- `GET /api/admin/economics` computes:
+  - `pack EV per tier` from current `cards.market_price_usd` and tier rarity weights
+  - fee revenue directly from `ledger_entries` (`platform_fee`) split by listings/auctions
+- `/admin/economics` now calls the real route (no mock API dependency)
 
-Files to wire:
-- Existing admin route(s) (or add one) to aggregate ledger entries.
+Files wired:
+- `apps/web/src/app/api/admin/economics/route.ts`
+- `apps/web/src/app/admin/economics/page.tsx`
 
 ## Notes on implementation style
 

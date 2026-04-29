@@ -13,6 +13,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.pokemontcg.io' },
       { protocol: 'https', hostname: 'product-images.tcgplayer.com' },
+      { protocol: 'https', hostname: 'images.scrydex.com' },
     ],
   },
   transpilePackages: ['@pullvault/shared', '@pullvault/db'],

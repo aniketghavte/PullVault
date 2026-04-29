@@ -12,3 +12,13 @@ export async function requireUserId(): Promise<string> {
   }
   return data.user.id;
 }
+
+// Returns the authenticated user object, or throws UNAUTHENTICATED.
+export async function requireUser() {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    throw new ApiError(ERROR_CODES.UNAUTHENTICATED, 'Sign in to continue.');
+  }
+  return data.user;
+}

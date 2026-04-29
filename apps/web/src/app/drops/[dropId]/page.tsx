@@ -1,14 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { PACK_TIERS } from '@pullvault/shared/constants';
-import { mockApi } from '@/lib/mock/api';
-import { useMockStore } from '@/lib/mock/store';
-import { useServerClock } from '@/lib/mock/clock';
-import type { Drop } from '@/lib/mock/types';
+import type { DropState } from '@pullvault/shared';
+import { getSocket } from '@/lib/socket-client';
 
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
@@ -17,6 +15,10 @@ import { MonoLabel } from '@/components/ui/MonoLabel';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { ResearchTableRow, ResearchTable } from '@/components/ui/ResearchTable';
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function formatMmSs(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
   const mm = Math.floor(s / 60);
@@ -24,36 +26,132 @@ function formatMmSs(ms: number) {
   return `${mm}:${String(ss).padStart(2, '0')}`;
 }
 
-export default function DropDetailPage({ params }: { params: { dropId: string } }) {
+function useLiveClock() {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default function DropDetailPage({ params }: { params: Promise<{ dropId: string }> }) {
+  const { dropId } = use(params);
   const router = useRouter();
-  const nowMs = useServerClock({ syncMockEngine: true });
-  const drop = useMockStore((s) => s.drops.find((d) => d.dropId === params.dropId));
+  const nowMs = useLiveClock();
+  const [drop, setDrop] = useState<DropState | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const socketRef = useRef(false);
+
+  // Fetch single drop from real API
+  const fetchDrop = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/drops/${dropId}`);
+      const json = await res.json();
+      if (json.ok) {
+        setDrop(json.data.drop);
+      } else {
+        setError(json.error?.message ?? 'Drop not found');
+      }
+    } catch {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  }, [dropId]);
+
+  useEffect(() => {
+    fetchDrop();
+  }, [fetchDrop]);
+
+  // Subscribe to Socket.io for live inventory updates
+  useEffect(() => {
+    if (!drop || socketRef.current) return;
+
+    try {
+      const socket = getSocket();
+      socketRef.current = true;
+
+      socket.emit('drop:join', { dropId });
+
+      socket.on('drop:inventory', (payload: { dropId: string; remaining: number }) => {
+        if (payload.dropId === dropId) {
+          setDrop((prev) => (prev ? { ...prev, remaining: payload.remaining } : prev));
+        }
+      });
+
+      socket.on('drop:sold_out', (payload: { dropId: string }) => {
+        if (payload.dropId === dropId) {
+          setDrop((prev) =>
+            prev ? { ...prev, status: 'sold_out', remaining: 0 } : prev,
+          );
+        }
+      });
+
+      return () => {
+        socket.emit('drop:leave', { dropId });
+        socket.off('drop:inventory');
+        socket.off('drop:sold_out');
+        socketRef.current = false;
+      };
+    } catch {
+      // Socket.io not available
+    }
+  }, [drop !== null, dropId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tier = useMemo(() => {
     if (!drop) return null;
     return PACK_TIERS.find((t) => t.code === drop.tierCode) ?? null;
   }, [drop]);
 
-  const buy = async (d: Drop) => {
+  // Buy handler — calls real API
+  const buy = async () => {
+    if (!drop) return;
     setBusy(true);
+    setError(null);
     try {
-      const res = await mockApi.drops.buyPack(d.dropId, crypto.randomUUID());
-      if (!res.ok) {
-        alert(res.error.message);
-        return;
+      const idempotencyKey = crypto.randomUUID();
+      const res = await fetch(`/api/drops/${drop.dropId}/purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idempotencyKey }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        router.push(`/packs/${json.data.purchaseId}/reveal`);
+      } else {
+        setError(json.error?.message ?? 'Purchase failed');
+        fetchDrop(); // Refresh to get current state
       }
-      router.push(`/packs/${res.data.purchaseId}/reveal`);
+    } catch {
+      setError('Network error — please try again.');
     } finally {
       setBusy(false);
     }
   };
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-3xl">
+          <MonoLabel>Loading drop…</MonoLabel>
+        </div>
+      </section>
+    );
+  }
 
   if (!drop) {
     return (
       <section className="px-4 pt-10 pb-16">
         <div className="mx-auto w-full max-w-3xl">
           <MonoLabel>Drop not found</MonoLabel>
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
       </section>
     );
@@ -68,22 +166,38 @@ export default function DropDetailPage({ params }: { params: { dropId: string } 
         <div className="space-y-3">
           <MonoLabel>{drop.tierName}</MonoLabel>
           <h1 className="font-display text-sectionDisplay tracking-tight leading-none">
-            {drop.priceUSD} pack • {drop.remaining}/{drop.totalInventory} remaining
+            ${drop.priceUSD} pack • {drop.remaining}/{drop.totalInventory} remaining
           </h1>
           <p className="text-bodyLarge text-ink/70">
-            Inventory is server-authoritative in the real build; here it updates inside the mock engine.
+            Inventory is server-authoritative. Concurrent purchases are resolved atomically.
           </p>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3 items-start">
           <ProductCard
             title="Buy pack"
-            subtitle={drop.status === 'scheduled' ? `Starts in ${formatMmSs(countdownMs)}` : drop.status === 'live' ? 'Live now' : 'Sold out'}
+            subtitle={
+              drop.status === 'scheduled'
+                ? `Starts in ${formatMmSs(countdownMs)}`
+                : drop.status === 'live'
+                  ? 'Live now'
+                  : 'Sold out'
+            }
           >
             <div className="space-y-4">
               {drop.status === 'live' && drop.remaining > 0 ? (
-                <ButtonPrimary onClick={() => buy(drop)} disabled={busy} className="w-full justify-center">
-                  Buy 1 pack — {drop.priceUSD}
+                <ButtonPrimary
+                  onClick={buy}
+                  disabled={busy}
+                  className="w-full justify-center"
+                >
+                  {busy ? 'Buying…' : `Buy 1 pack — $${drop.priceUSD}`}
                 </ButtonPrimary>
               ) : (
                 <ButtonPillOutline disabled className="w-full justify-center">
@@ -93,18 +207,25 @@ export default function DropDetailPage({ params }: { params: { dropId: string } 
               <div className="pt-2 text-micro text-mutedSlate">
                 Drop ID: <span className="text-ink">{drop.dropId}</span>
               </div>
-              <Link href="/portfolio" className="text-actionBlue underline underline-offset-4 decoration-actionBlue/30 hover:decoration-actionBlue/60">
+              <Link
+                href="/portfolio"
+                className="text-actionBlue underline underline-offset-4 decoration-actionBlue/30 hover:decoration-actionBlue/60"
+              >
                 View portfolio valuation
               </Link>
             </div>
           </ProductCard>
 
           <div className="lg:col-span-2 space-y-6">
-            <DarkFeatureBand tone={drop.status === 'live' ? 'green' : 'navy'} className="rounded-lg border border-cardBorder">
+            <DarkFeatureBand
+              tone={drop.status === 'live' ? 'green' : 'navy'}
+              className="rounded-lg border border-cardBorder"
+            >
               <div className="space-y-3">
                 <div className="text-featureHeading font-semibold">Rarity weights</div>
                 <p className="text-bodyLarge text-canvas/85">
-                  Higher tiers bias toward rarer cards. Contents are determined at purchase time.
+                  Higher tiers bias toward rarer cards. Contents are determined at purchase
+                  time.
                 </p>
               </div>
 
@@ -113,27 +234,47 @@ export default function DropDetailPage({ params }: { params: { dropId: string } 
                   <ResearchTable>
                     <ResearchTableRow
                       left={<span className="text-body font-semibold">Common</span>}
-                      center={<span className="text-body text-canvas/85">{Math.round(tier.rarityWeights.common * 100)}%</span>}
+                      center={
+                        <span className="text-body text-canvas/85">
+                          {Math.round(tier.rarityWeights.common * 100)}%
+                        </span>
+                      }
                       right={<span />}
                     />
                     <ResearchTableRow
                       left={<span className="text-body font-semibold">Uncommon</span>}
-                      center={<span className="text-body text-canvas/85">{Math.round(tier.rarityWeights.uncommon * 100)}%</span>}
+                      center={
+                        <span className="text-body text-canvas/85">
+                          {Math.round(tier.rarityWeights.uncommon * 100)}%
+                        </span>
+                      }
                       right={<span />}
                     />
                     <ResearchTableRow
                       left={<span className="text-body font-semibold">Rare</span>}
-                      center={<span className="text-body text-canvas/85">{Math.round(tier.rarityWeights.rare * 100)}%</span>}
+                      center={
+                        <span className="text-body text-canvas/85">
+                          {Math.round(tier.rarityWeights.rare * 100)}%
+                        </span>
+                      }
                       right={<span />}
                     />
                     <ResearchTableRow
                       left={<span className="text-body font-semibold">Ultra rare</span>}
-                      center={<span className="text-body text-canvas/85">{Math.round(tier.rarityWeights.ultra_rare * 100)}%</span>}
+                      center={
+                        <span className="text-body text-canvas/85">
+                          {Math.round(tier.rarityWeights.ultra_rare * 100)}%
+                        </span>
+                      }
                       right={<span />}
                     />
                     <ResearchTableRow
                       left={<span className="text-body font-semibold">Secret rare</span>}
-                      center={<span className="text-body text-canvas/85">{Math.round(tier.rarityWeights.secret_rare * 100)}%</span>}
+                      center={
+                        <span className="text-body text-canvas/85">
+                          {Math.round(tier.rarityWeights.secret_rare * 100)}%
+                        </span>
+                      }
                       right={<span />}
                     />
                   </ResearchTable>
@@ -144,8 +285,11 @@ export default function DropDetailPage({ params }: { params: { dropId: string } 
             <div className="grid gap-4 md:grid-cols-3">
               {[
                 { t: 'Tension first', d: 'Commons reveal before rares.' },
-                { t: 'Real pricing feel', d: 'Each drawn card shows market value.' },
-                { t: 'Atomic experience', d: 'Funds and inventory update together in the UI.' },
+                { t: 'Real pricing', d: 'Each drawn card shows market value.' },
+                {
+                  t: 'Atomic purchase',
+                  d: 'Funds and inventory update together in one DB transaction.',
+                },
               ].map((c) => (
                 <div key={c.t} className="rounded-lg border border-cardBorder bg-canvas p-6">
                   <div className="text-featureHeading font-semibold">{c.t}</div>
@@ -159,4 +303,3 @@ export default function DropDetailPage({ params }: { params: { dropId: string } 
     </section>
   );
 }
-

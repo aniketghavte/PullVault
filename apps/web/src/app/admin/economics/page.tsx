@@ -6,23 +6,39 @@ import Link from 'next/link';
 import { PACK_TIERS, PLATFORM } from '@pullvault/shared/constants';
 import { money, toMoneyString } from '@pullvault/shared/money';
 
-import { mockApi } from '@/lib/mock/api';
-
 import { MonoLabel } from '@/components/ui/MonoLabel';
 import { ResearchTable, ResearchTableRow } from '@/components/ui/ResearchTable';
 import { DarkFeatureBand } from '@/components/ui/DarkFeatureBand';
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 
 export default function AdminEconomicsPage() {
-  const [summary, setSummary] = useState<null | Awaited<ReturnType<typeof mockApi.economics.summary>>>(null);
+  const [data, setData] = useState<{
+    packEVByTier: Record<
+      string,
+      {
+        tierName: string;
+        evPerPackUSD: string;
+        evPerCardUSD: string;
+        houseMarginUSD: string;
+      }
+    >;
+    tradeFeeRevenueUSD: string;
+    auctionFeeRevenueUSD: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    mockApi.economics.summary().then((res) => {
-      if (res.ok) setSummary(res);
-    });
+    fetch('/api/admin/economics', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.ok) {
+          setData(json.data);
+        } else {
+          setError(json.error?.message ?? 'Failed to load economics');
+        }
+      })
+      .catch(() => setError('Failed to load economics'));
   }, []);
-
-  const data = summary?.ok ? summary.data : null;
 
   return (
     <section className="px-4 pt-10 pb-16">
@@ -31,7 +47,7 @@ export default function AdminEconomicsPage() {
           <MonoLabel>Admin</MonoLabel>
           <h1 className="font-display text-sectionDisplay tracking-tight leading-none">Platform economics</h1>
           <p className="text-bodyLarge text-ink/70">
-            Expected value per tier + simulated fee revenue from the mock ledger.
+            Expected value per tier + fee revenue computed from real ledger data.
           </p>
         </div>
 
@@ -39,7 +55,7 @@ export default function AdminEconomicsPage() {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
               <div>
-                <div className="text-featureHeading font-semibold">Revenue streams (mock)</div>
+                <div className="text-featureHeading font-semibold">Revenue streams (real)</div>
                 <div className="text-bodyLarge text-canvas/85 mt-2">
                   Trade fee: <span className="font-semibold">{toMoneyString(money(PLATFORM.TRADE_FEE_RATE))}</span> rate
                   • Auction fee: <span className="font-semibold">{toMoneyString(money(PLATFORM.AUCTION_FEE_RATE))}</span> rate
@@ -56,13 +72,18 @@ export default function AdminEconomicsPage() {
               <RevenueCard label="Trade platform fee revenue" value={data?.tradeFeeRevenueUSD ?? '0.00'} />
               <RevenueCard label="Auction platform fee revenue" value={data?.auctionFeeRevenueUSD ?? '0.00'} />
             </div>
+            {error ? (
+              <div className="rounded-lg border border-coral/40 bg-coral/10 p-4 text-body text-canvas">
+                {error}
+              </div>
+            ) : null}
           </div>
         </DarkFeatureBand>
 
         <div className="rounded-lg border border-cardBorder bg-canvas p-6 space-y-4">
           <div className="flex items-center justify-between gap-4">
             <MonoLabel>EV per tier</MonoLabel>
-            <div className="text-micro text-mutedSlate">Computed from current mock catalog snapshot</div>
+            <div className="text-micro text-mutedSlate">Computed from `cards.market_price_usd` + tier rarity weights</div>
           </div>
 
           <ResearchTable>

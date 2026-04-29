@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { sanitizeReturnPath } from '@/lib/auth-redirect';
+
 // Refreshes the Supabase auth cookie on every request so SSR pages
 // always see a current session. Skip static + image routes.
 export async function middleware(request: NextRequest) {
@@ -32,7 +34,16 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    const destination = sanitizeReturnPath(request.nextUrl.searchParams.get('next'));
+    return NextResponse.redirect(new URL(destination, request.url));
+  }
+
   return response;
 }
 

@@ -1,33 +1,70 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { PLATFORM } from '@pullvault/shared/constants';
-import { feeOf, formatUSD, money, sub, toMoneyString } from '@pullvault/shared/money';
-
-import { mockApi } from '@/lib/mock/api';
-import { useMockStore } from '@/lib/mock/store';
-import { useServerClock } from '@/lib/mock/clock';
+import { feeOf, formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 import { MonoLabel } from '@/components/ui/MonoLabel';
 import { ResearchTable, ResearchTableRow } from '@/components/ui/ResearchTable';
 
+interface ListingDetail {
+  listing: {
+    listingId: string;
+    userCardId: string;
+    sellerId: string;
+    sellerHandle: string;
+    priceUSD: string;
+    status: string;
+  };
+  card: {
+    id: string;
+    name: string;
+    set: string;
+    rarity: string;
+    imageUrl: string;
+    marketPriceUSD: string;
+  };
+}
+
 export default function MarketplaceListingDetailPage({ params }: { params: { listingId: string } }) {
-  useServerClock();
   const router = useRouter();
+  const { listingId } = params;
 
-  const { listing, card, meId } = useMockStore((s) => {
-    const l = s.listings.find((x) => x.listingId === params.listingId && x.status === 'active');
-    const uc = l ? s.userCards.find((u) => u.userCardId === l.userCardId) : undefined;
-    return { listing: l, card: uc, meId: s.me.id };
-  });
-
-  const sellerOwns = listing ? listing.sellerId === meId : false;
+  const [data, setData] = useState<ListingDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [meId, setMeId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok && json.data.user) {
+          setMeId(json.data.user.id);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch(`/api/listings/${listingId}`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) {
+          setData(json.data);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [listingId]);
+
+  const listing = data?.listing;
+  const card = data?.card;
+
+  const sellerOwns = listing && meId ? listing.sellerId === meId : false;
 
   const fee = useMemo(() => {
     if (!listing) return '0.00';
@@ -45,13 +82,30 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
     if (!listing) return;
     setBusy(true);
     try {
-      const res = await mockApi.listings.buy(listing.listingId);
-      if (!res.ok) return alert(res.error.message);
+      const res = await fetch(`/api/listings/${listingId}/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }),
+      });
+      const json = await res.json();
+      if (!json.ok) return alert(json.error?.message ?? 'Failed to buy');
       router.push('/portfolio');
+    } catch {
+      alert('Network error');
     } finally {
       setBusy(false);
     }
   };
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-4xl space-y-3">
+          <MonoLabel>Loading listing...</MonoLabel>
+        </div>
+      </section>
+    );
+  }
 
   if (!listing || !card) {
     return (
@@ -146,9 +200,9 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
             </div>
 
             <div className="rounded-lg border border-cardBorder bg-canvas p-6">
-              <div className="text-featureHeading font-semibold">Atomic trade (mock)</div>
+              <div className="text-featureHeading font-semibold">Atomic trade</div>
               <p className="mt-2 text-bodyLarge text-ink/70">
-                When you click buy, the mock engine transfers the card and debits your balance in the same state update.
+                When you click buy, the card transfers and your balance is debited in the same state update.
               </p>
             </div>
           </div>

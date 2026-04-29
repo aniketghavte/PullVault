@@ -2,21 +2,17 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { AUCTION_DURATIONS_MINUTES, PLATFORM } from '@pullvault/shared/constants';
 import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
 import { mockApi } from '@/lib/mock/api';
-import { useMockStore } from '@/lib/mock/store';
-import { useServerClock } from '@/lib/mock/clock';
 
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 import { MonoLabel } from '@/components/ui/MonoLabel';
-
-import type { UserCard } from '@/lib/mock/types';
 
 function hash(str: string) {
   let h = 2166136261;
@@ -47,21 +43,53 @@ function makeSparklinePoints(cardId: string, baseUSD: string) {
   });
 }
 
+interface DetailData {
+  card: {
+    userCardId: string;
+    status: string;
+    acquiredPriceUSD: string;
+    acquiredAt: string;
+    cardId: string;
+    name: string;
+    set: string;
+    rarity: string;
+    imageUrl: string;
+    marketPriceUSD: string;
+  };
+  activeListing: { listingId: string } | null;
+  activeAuction: { auctionId: string } | null;
+}
+
 export default function PortfolioCardDetailPage({ params }: { params: { userCardId: string } }) {
   const router = useRouter();
-  const _nowMs = useServerClock();
+  const { userCardId } = params;
 
-  const card = useMockStore((s) => s.userCards.find((uc) => uc.userCardId === params.userCardId && uc.ownerId === s.me.id));
+  const [data, setData] = useState<DetailData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const activeListing = useMockStore((s) => s.listings.find((l) => l.userCardId === params.userCardId && l.status === 'active'));
-  const activeAuction = useMockStore((s) => s.auctions.find((a) => a.userCardId === params.userCardId && (a.status === 'live' || a.status === 'extended')));
+  useEffect(() => {
+    fetch(`/api/portfolio/${userCardId}`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.ok) setData(json.data);
+      })
+      .finally(() => setLoading(false));
+  }, [userCardId]);
 
-  const [listPriceUSD, setListPriceUSD] = useState<string>(() => (card?.marketPriceUSD ? card.marketPriceUSD : ''));
+  const card = data?.card;
+  const activeListing = data?.activeListing;
+  const activeAuction = data?.activeAuction;
+
+  const [listPriceUSD, setListPriceUSD] = useState<string>('');
   const [auctionDurationMinutes, setAuctionDurationMinutes] = useState<number>(AUCTION_DURATIONS_MINUTES[1]);
-  const [auctionStartBidUSD, setAuctionStartBidUSD] = useState<string>(() => (card?.marketPriceUSD ? card.marketPriceUSD : ''));
+  const [auctionStartBidUSD, setAuctionStartBidUSD] = useState<string>('');
 
-  // Keep defaults in sync once the card loads.
-  const cardLoaded = !!card;
+  // Set defaults once loaded
+  useEffect(() => {
+    if (card && !listPriceUSD) setListPriceUSD(card.marketPriceUSD);
+    if (card && !auctionStartBidUSD) setAuctionStartBidUSD(card.marketPriceUSD);
+  }, [card, listPriceUSD, auctionStartBidUSD]);
+
   const safeDefaultList = card?.marketPriceUSD ?? '0.00';
   const safeDefaultBid = card?.marketPriceUSD ?? '0.00';
   const listPrice = listPriceUSD || safeDefaultList;
@@ -71,6 +99,16 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
     if (!card) return [];
     return makeSparklinePoints(card.userCardId, card.marketPriceUSD);
   }, [card]);
+
+  if (loading) {
+    return (
+      <section className="px-4 pt-10 pb-16">
+        <div className="mx-auto w-full max-w-3xl">
+          <MonoLabel>Loading card...</MonoLabel>
+        </div>
+      </section>
+    );
+  }
 
   if (!card) {
     return (
@@ -184,9 +222,18 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
                   <ButtonPrimary
                     disabled={!canList}
                     onClick={async () => {
-                      const res = await mockApi.listings.create({ userCardId: card.userCardId, priceUSD: listPrice });
-                      if (!res.ok) return alert(res.error.message);
-                      router.push(`/marketplace/${res.data.listingId}`);
+                      try {
+                        const res = await fetch('/api/listings', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userCardId: card.userCardId, priceUSD: listPrice }),
+                        });
+                        const json = await res.json();
+                        if (!json.ok) return alert(json.error?.message || 'Failed to list card');
+                        router.push(`/marketplace/${json.data.listingId}`);
+                      } catch (err) {
+                        alert('Network error');
+                      }
                     }}
                     className="w-full justify-center"
                   >
