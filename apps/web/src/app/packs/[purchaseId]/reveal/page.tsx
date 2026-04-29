@@ -180,7 +180,7 @@ export default function PackRevealPage({ params }: { params: { purchaseId: strin
             Reveal tension — commons first.
           </h1>
           <p className="text-bodyLarge text-ink/70">
-            Pack contents are drawn at purchase time in the mock engine, so the reveal is purely presentation.
+            Pack contents are sealed at purchase time. Reveal your cards one by one.
           </p>
         </div>
 
@@ -260,7 +260,7 @@ export default function PackRevealPage({ params }: { params: { purchaseId: strin
           <div className="space-y-6">
             <ProductCard
               title="Pack summary"
-              subtitle="Realistic valuation display (mock)"
+              subtitle="Live valuation display"
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">

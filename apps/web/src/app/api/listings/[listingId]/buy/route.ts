@@ -2,7 +2,8 @@ import { handler, ApiError } from '@/lib/api';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { requireUserId } from '@/lib/auth';
-import { getPublisher } from '@pullvault/shared/redis';
+import { publishInternal, INTERNAL_EVENTS } from '@/lib/realtime/publisher';
+import { REDIS_KEYS } from '@pullvault/shared/constants';
 import { ERROR_CODES, PLATFORM } from '@pullvault/shared';
 import { buyListingSchema } from '@pullvault/shared';
 import { money, feeOf } from '@pullvault/shared/money';
@@ -140,9 +141,16 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ listin
   });
 
   // Publish portfolio invalidation events for both buyer and seller via Redis
-  const redis = getPublisher();
-  await redis.publish(`pv:portfolio:${buyerId}`, JSON.stringify({ event: 'portfolio:invalidate', payload: { userId: buyerId } }));
-  await redis.publish(`pv:portfolio:${sellerId}`, JSON.stringify({ event: 'portfolio:invalidate', payload: { userId: sellerId } }));
+  await publishInternal(
+    REDIS_KEYS.channel.portfolio(buyerId),
+    INTERNAL_EVENTS.portfolioInvalidated,
+    { userId: buyerId },
+  );
+  await publishInternal(
+    REDIS_KEYS.channel.portfolio(sellerId),
+    INTERNAL_EVENTS.portfolioInvalidated,
+    { userId: sellerId },
+  );
 
   return { ok: true };
 });

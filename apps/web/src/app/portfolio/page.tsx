@@ -72,8 +72,21 @@ export default function PortfolioPage() {
     
     // The server emits 'portfolio:invalidate' when our cards change
     socket.on('portfolio:invalidate', fetchPortfolio);
+
+    // Live price ticks — update card values without full refetch
+    const handleTick = (data: { cardId: string; priceUSD: string }) => {
+      if (!data.cardId || !data.priceUSD) return;
+      setUserCards((prev) =>
+        prev.map((c) =>
+          c.cardId === data.cardId ? { ...c, marketPriceUSD: data.priceUSD } : c,
+        ),
+      );
+    };
+    socket.on('price:tick', handleTick);
+
     return () => {
       socket.off('portfolio:invalidate', fetchPortfolio);
+      socket.off('price:tick', handleTick);
     };
   }, [fetchPortfolio]);
 

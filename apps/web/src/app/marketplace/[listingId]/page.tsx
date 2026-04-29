@@ -39,6 +39,7 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
   const [loading, setLoading] = useState(true);
   const [meId, setMeId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/me')
@@ -80,6 +81,7 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
 
   const buy = async () => {
     if (!listing) return;
+    setError(null);
     setBusy(true);
     try {
       const res = await fetch(`/api/listings/${listingId}/buy`, {
@@ -88,10 +90,34 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
         body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }),
       });
       const json = await res.json();
-      if (!json.ok) return alert(json.error?.message ?? 'Failed to buy');
+      if (!json.ok) {
+        setError(json.error?.message ?? 'Failed to buy');
+        return;
+      }
       router.push('/portfolio');
     } catch {
-      alert('Network error');
+      setError('Network error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancel = async () => {
+    if (!listing) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/listings/${listingId}/cancel`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        setError(json.error?.message ?? 'Failed to cancel');
+        return;
+      }
+      router.push('/portfolio');
+    } catch {
+      setError('Network error');
     } finally {
       setBusy(false);
     }
@@ -185,9 +211,21 @@ export default function MarketplaceListingDetailPage({ params }: { params: { lis
                   Platform fee: {formatUSD(fee)} • Seller gets {formatUSD(toMoneyString(sellerGetsGross))}
                 </div>
 
-                <ButtonPrimary onClick={buy} disabled={busy || sellerOwns} className="w-full justify-center">
-                  {sellerOwns ? 'Your listing' : busy ? 'Buying…' : 'Buy card'}
+                <ButtonPrimary onClick={buy} disabled={busy || sellerOwns || listing.status !== 'active'} className="w-full justify-center">
+                  {listing.status !== 'active' ? `${listing.status === 'sold' ? 'Already sold' : 'Cancelled'}` : sellerOwns ? 'Your listing' : busy ? 'Buying…' : 'Buy card'}
                 </ButtonPrimary>
+
+                {sellerOwns && listing.status === 'active' ? (
+                  <ButtonPillOutline onClick={cancel} disabled={busy} className="w-full justify-center text-errorRed border-errorRed/30 hover:border-errorRed/60">
+                    Cancel listing
+                  </ButtonPillOutline>
+                ) : null}
+
+                {error ? (
+                  <div className="rounded-lg border border-errorRed/30 bg-errorRed/10 px-4 py-2 text-micro text-errorRed">
+                    {error}
+                  </div>
+                ) : null}
 
                 <ButtonPillOutline
                   onClick={() => router.push('/marketplace')}

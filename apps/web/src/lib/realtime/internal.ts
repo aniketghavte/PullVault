@@ -62,3 +62,17 @@ export async function triggerPriceRefresh(payload: {
     ...(payload.sample !== undefined ? { sample: payload.sample } : {}),
   });
 }
+
+/**
+ * Schedule a BullMQ delayed job for auction settlement at the given end time.
+ * Called after auction creation and after anti-snipe extension.
+ */
+export async function scheduleAuctionCloseJob(payload: {
+  auctionId: string;
+  endAt: string; // ISO
+}): Promise<InternalResponse<{ auctionId: string }>> {
+  return callInternal<{ auctionId: string }>('/internal/jobs/auction-close', {
+    auctionId: payload.auctionId,
+    endAt: payload.endAt,
+  });
+}

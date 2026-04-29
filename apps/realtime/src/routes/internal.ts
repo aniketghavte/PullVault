@@ -11,6 +11,7 @@ import { logger } from '@pullvault/shared/logger';
 
 import { env } from '../env.js';
 import { enqueuePriceRefresh } from '../queues/price-refresh.js';
+import { scheduleAuctionClose } from '../queues/auction-close.js';
 
 // Web app -> realtime trust boundary. Web sometimes wants to broadcast
 // directly (e.g. forced room reload), without going through Redis.
@@ -50,5 +51,28 @@ internalRouter.post('/jobs/price-refresh', async (req, res) => {
     return res
       .status(500)
       .json({ ok: false, error: { code: 'INTERNAL', message: 'enqueue failed' } });
+  }
+});
+
+const auctionCloseSchema = z.object({
+  auctionId: z.string().uuid(),
+  endAt: z.string(), // ISO date string
+});
+
+internalRouter.post('/jobs/auction-close', async (req, res) => {
+  const parsed = auctionCloseSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res
+      .status(400)
+      .json({ ok: false, error: { code: 'VALIDATION', message: 'Bad payload', details: parsed.error.flatten() } });
+  }
+  try {
+    await scheduleAuctionClose(parsed.data.auctionId, new Date(parsed.data.endAt));
+    return res.status(202).json({ ok: true, data: { auctionId: parsed.data.auctionId } });
+  } catch (err) {
+    logger.error({ err }, 'failed to schedule auction close');
+    return res
+      .status(500)
+      .json({ ok: false, error: { code: 'INTERNAL', message: 'schedule failed' } });
   }
 });

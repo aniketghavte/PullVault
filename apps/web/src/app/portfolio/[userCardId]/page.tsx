@@ -8,41 +8,11 @@ import { useRouter } from 'next/navigation';
 import { AUCTION_DURATIONS_MINUTES, PLATFORM } from '@pullvault/shared/constants';
 import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
 
-import { mockApi } from '@/lib/mock/api';
-
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 import { MonoLabel } from '@/components/ui/MonoLabel';
 
-function hash(str: string) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function makeSparklinePoints(cardId: string, baseUSD: string) {
-  const base = money(baseUSD);
-  const points: number[] = [];
-  const seed = hash(cardId);
-  for (let i = 0; i < 24; i++) {
-    const r = ((seed + i * 97) % 1000) / 1000; // 0..1
-    const drift = (r - 0.5) * 0.35; // +/-17.5%
-    const v = base.times(1 + drift);
-    points.push(Number(toMoneyString(v))); // used only for SVG scaling
-  }
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  return points.map((p, i) => {
-    const x = (i / (points.length - 1)) * 220;
-    const y = 80 - ((p - min) / range) * 60;
-    return { x, y };
-  });
-}
-
+// Helper removed: real points are computed from history.
 interface DetailData {
   card: {
     userCardId: string;
@@ -65,13 +35,32 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
   const { userCardId } = params;
 
   const [data, setData] = useState<DetailData | null>(null);
+  const [history, setHistory] = useState<{ priceUsd: string, fetchedAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/portfolio/${userCardId}`)
       .then(res => res.json())
       .then(json => {
-        if (json.ok) setData(json.data);
+        if (json.ok) {
+          setData(json.data);
+          // Fetch history after we know the underlying cardId
+          if (json.data.card?.cardId) {
+            fetch(`/api/cards/${json.data.card.cardId}/history`)
+              .then(hRes => hRes.json())
+              .then(hJson => {
+                if (hJson.ok) {
+                  const safeHistory = Array.isArray(hJson.data?.history) ? hJson.data.history : [];
+                  setHistory(safeHistory);
+                } else {
+                  setHistory([]);
+                }
+              })
+              .catch(() => {
+                setHistory([]);
+              });
+          }
+        }
       })
       .finally(() => setLoading(false));
   }, [userCardId]);
@@ -96,9 +85,26 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
   const startBid = auctionStartBidUSD || safeDefaultBid;
 
   const sparkPoints = useMemo(() => {
-    if (!card) return [];
-    return makeSparklinePoints(card.userCardId, card.marketPriceUSD);
-  }, [card]);
+    const safeHistory = Array.isArray(history) ? history : [];
+    if (!card || safeHistory.length === 0) return [];
+    const points = safeHistory.map(h => Number(h.priceUsd));
+    // Include current market price as the final point
+    points.push(Number(card.marketPriceUSD));
+    
+    if (points.length === 1) {
+       // Just draw a straight line across if we only have 1 data point
+       return [{ x: 0, y: 40 }, { x: 220, y: 40 }];
+    }
+
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min || 1;
+    return points.map((p, i) => {
+      const x = (i / (points.length - 1)) * 220;
+      const y = 80 - ((p - min) / range) * 60;
+      return { x, y };
+    });
+  }, [card, history]);
 
   if (loading) {
     return (
@@ -163,8 +169,8 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
 
             <div className="rounded-lg border border-cardBorder bg-canvas p-6 space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <div className="text-featureHeading font-semibold">30-day price sparkline (mock)</div>
-                <div className="text-micro text-mutedSlate">Not historical, simulated for UI</div>
+                <div className="text-featureHeading font-semibold">Price history</div>
+                <div className="text-micro text-mutedSlate">Real historical data</div>
               </div>
               <svg viewBox="0 0 220 80" className="w-full h-20">
                 {sparkPoints.length > 0 ? (
@@ -274,13 +280,22 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
                   <ButtonPrimary
                     disabled={!canAuction}
                     onClick={async () => {
-                      const res = await mockApi.auctions.create({
-                        userCardId: card.userCardId,
-                        startingBidUSD: startBid,
-                        durationMinutes: auctionDurationMinutes,
-                      });
-                      if (!res.ok) return alert(res.error.message);
-                      router.push(`/auctions/${res.data.auctionId}`);
+                      try {
+                        const res = await fetch('/api/auctions', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            userCardId: card.userCardId,
+                            startingBidUSD: startBid,
+                            durationMinutes: auctionDurationMinutes,
+                          }),
+                        });
+                        const json = await res.json();
+                        if (!json.ok) return alert(json.error?.message || 'Failed to create auction');
+                        router.push(`/auctions/${json.data.auctionId}`);
+                      } catch {
+                        alert('Network error');
+                      }
                     }}
                     className="w-full justify-center"
                   >
@@ -298,7 +313,7 @@ export default function PortfolioCardDetailPage({ params }: { params: { userCard
               <div className="text-featureHeading font-semibold">Details</div>
               <div className="space-y-2 text-bodyLarge text-ink/70">
                 <div>
-                  Status gate: a card cannot be listed and auctioned simultaneously in the mock engine.
+                Status gate: a card cannot be listed and auctioned simultaneously.
                 </div>
               </div>
               <ButtonPillOutline

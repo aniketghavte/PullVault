@@ -29,23 +29,110 @@ export function startAuctionCloseWorker() {
     async (job) => {
       const { auctionId } = job.data;
       logger.info({ auctionId, jobId: job.id }, 'auction-close job picked up');
-      // TODO: implement settlement transaction:
-      //   BEGIN;
-      //     SELECT * FROM auctions WHERE id=$1 FOR UPDATE;
-      //       - if status = 'settled' -> noop, return.
-      //       - if end_at > now() -> reschedule for new end_at, return.
-      //     IF current_high_bid IS NULL:
-      //       UPDATE auctions SET status='settled', settled_at=now();
-      //       UPDATE user_cards SET status='held' WHERE id=$card; -- return to seller
-      //     ELSE:
-      //       UPDATE balance_holds SET status='consumed' WHERE reference_id=$bid;
-      //       UPDATE profiles (winner): held -= price.
-      //       UPDATE profiles (seller): available += price - fee.
-      //       UPDATE user_cards SET owner_id=$winner, status='held'.
-      //       INSERT ledger_entries (winner debit, seller credit, platform fee).
-      //       UPDATE auctions SET status='settled', winner_id, final_price_usd, settled_at;
-      //   COMMIT;
-      // Then publish pv.auction.settled.
+
+      // Dynamic import to avoid circular dependencies — the settlement
+      // service lives in the web app package but is shared via the db package.
+      const { getDb, schema } = await import('@pullvault/db');
+      const { eq, and, sql } = await import('drizzle-orm');
+      const { getPublisher, INTERNAL_EVENTS } = await import('@pullvault/shared');
+      const { money, toMoneyString, feeOf } = await import('@pullvault/shared/money');
+      const { PLATFORM } = await import('@pullvault/shared/constants');
+      const { REDIS_KEYS: keys } = await import('@pullvault/shared/constants');
+      
+      const db = getDb();
+
+      // Run settlement in a single transaction
+      const result = await db.transaction(async (tx) => {
+        // 1. Lock auction
+        const [auction] = await tx
+          .select()
+          .from(schema.auctions)
+          .where(eq(schema.auctions.id, auctionId))
+          .for('update');
+
+        if (!auction) {
+          logger.warn({ auctionId }, 'auction-close: not found');
+          return { settled: false, rescheduleEndAt: null as Date | null, winnerId: null as string | null };
+        }
+
+        if (auction.status === 'settled' || auction.status === 'cancelled') {
+          return { settled: true, rescheduleEndAt: null as Date | null, winnerId: auction.winnerId };
+        }
+
+        if (auction.endAt.getTime() > Date.now()) {
+          return { settled: false, rescheduleEndAt: auction.endAt, winnerId: null as string | null };
+        }
+
+        // No bids
+        if (!auction.currentHighBidId) {
+          await tx.update(schema.userCards).set({ status: 'held' }).where(eq(schema.userCards.id, auction.userCardId));
+          await tx.update(schema.auctions).set({ status: 'settled', settledAt: new Date() }).where(eq(schema.auctions.id, auctionId));
+          logger.info({ auctionId }, 'auction settled with no bids');
+          return { settled: true, rescheduleEndAt: null as Date | null, winnerId: null as string | null };
+        }
+
+        // Has winner
+        const winnerId = auction.currentHighBidderId!;
+        const winningBidId = auction.currentHighBidId;
+        const finalPrice = money(auction.currentHighBidUsd!);
+        const fee = feeOf(finalPrice, PLATFORM.AUCTION_FEE_RATE);
+        const netSeller = finalPrice.minus(fee);
+
+        // Consume winning hold
+        await tx.update(schema.balanceHolds)
+          .set({ status: 'consumed', resolvedAt: new Date() })
+          .where(and(eq(schema.balanceHolds.referenceId, winningBidId), eq(schema.balanceHolds.status, 'held')));
+
+        // Debit winner's held
+        await tx.update(schema.profiles)
+          .set({ heldBalanceUsd: sql`${schema.profiles.heldBalanceUsd} - ${toMoneyString(finalPrice)}`, updatedAt: new Date() })
+          .where(eq(schema.profiles.id, winnerId));
+
+        // Credit seller
+        await tx.update(schema.profiles)
+          .set({ availableBalanceUsd: sql`${schema.profiles.availableBalanceUsd} + ${toMoneyString(netSeller)}`, updatedAt: new Date() })
+          .where(eq(schema.profiles.id, auction.sellerId));
+
+        // Transfer card
+        await tx.update(schema.userCards)
+          .set({ ownerId: winnerId, status: 'held', acquiredFrom: 'auction', sourceRefId: auctionId, acquiredPriceUsd: toMoneyString(finalPrice), acquiredAt: new Date() })
+          .where(eq(schema.userCards.id, auction.userCardId));
+
+        // Mark settled
+        await tx.update(schema.auctions)
+          .set({ status: 'settled', settledAt: new Date(), winnerId, finalPriceUsd: toMoneyString(finalPrice) })
+          .where(eq(schema.auctions.id, auctionId));
+
+        // Ledger entries
+        await tx.insert(schema.ledgerEntries).values([
+          { kind: 'auction_settlement_debit', userId: winnerId, counterpartyId: auction.sellerId, amountUsd: toMoneyString(finalPrice.neg()), referenceTable: 'auctions', referenceId: auctionId },
+          { kind: 'auction_settlement_credit', userId: auction.sellerId, counterpartyId: winnerId, amountUsd: toMoneyString(netSeller), referenceTable: 'auctions', referenceId: auctionId },
+          { kind: 'platform_fee', userId: null, amountUsd: toMoneyString(fee), referenceTable: 'auctions', referenceId: auctionId, metadata: { source: 'auction' } },
+        ]);
+
+        logger.info({ auctionId, winnerId, finalPriceUSD: toMoneyString(finalPrice) }, 'auction settled with winner');
+        return { settled: true, rescheduleEndAt: null as Date | null, winnerId };
+      });
+
+      if (result.rescheduleEndAt) {
+        await scheduleAuctionClose(auctionId, result.rescheduleEndAt);
+        return;
+      }
+
+      if (result.settled) {
+        // Publish settlement event
+        try {
+          const pub = getPublisher();
+          const channel = keys.channel.auctionEvents(auctionId);
+          await pub.publish(channel, JSON.stringify({
+            event: INTERNAL_EVENTS.auctionSettled,
+            emittedAt: new Date().toISOString(),
+            payload: { auctionId, winnerId: result.winnerId, finalPriceUSD: null },
+          }));
+        } catch (err) {
+          logger.warn({ err, auctionId }, 'failed to publish settlement event');
+        }
+      }
     },
     {
       connection: bullConnection(),
