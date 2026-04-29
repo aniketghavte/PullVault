@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { formatUSD, money, toMoneyString } from '@pullvault/shared/money';
@@ -50,8 +50,8 @@ interface PurchaseData {
   drawnCards: DrawnCard[];
 }
 
-export default function PackRevealPage({ params }: { params: { purchaseId: string } }) {
-  const { purchaseId } = params;
+export default function PackRevealPage({ params }: { params: Promise<{ purchaseId: string }> }) {
+  const { purchaseId } = use(params);
   const router = useRouter();
   
   const [purchase, setPurchase] = useState<PurchaseData | null>(null);
