@@ -32,38 +32,50 @@ export async function ensureProfile(userId: string, email: string, handle?: stri
   if (existing) return existing;
 
   // Profile doesn't exist — create one with the default starting balance
-  const derivedHandle = handle ?? email.split('@')[0] ?? 'user';
+  // TRUNCATION: Handle is varchar(24) in schema. Ensure we don't crash on long emails/handles.
+  const rawHandle = handle ?? email.split('@')[0] ?? 'user';
+  const derivedHandle = rawHandle.slice(0, 24);
   const startingBalance = toMoneyString(PLATFORM.DEFAULT_STARTING_BALANCE_USD);
 
-  const [created] = await db
-    .insert(schema.profiles)
-    .values({
-      id: userId,
-      email,
-      handle: derivedHandle,
-      availableBalanceUsd: startingBalance,
-      heldBalanceUsd: '0.00',
-    })
-    .onConflictDoNothing({ target: schema.profiles.id })
-    .returning();
+  try {
+    const [created] = await db
+      .insert(schema.profiles)
+      .values({
+        id: userId,
+        email,
+        handle: derivedHandle,
+        availableBalanceUsd: startingBalance,
+        heldBalanceUsd: '0.00',
+      })
+      .onConflictDoNothing({ target: schema.profiles.id })
+      .returning();
 
-  if (created) {
-    logger.info(
-      { userId, handle: derivedHandle, balance: startingBalance },
-      'profile created with starting balance',
-    );
+    if (created) {
+      logger.info(
+        { userId, handle: derivedHandle, balance: startingBalance },
+        'profile created with starting balance',
+      );
 
-    // Also write the initial deposit ledger entry
-    await db.insert(schema.ledgerEntries).values({
-      kind: 'deposit',
-      userId,
-      amountUsd: startingBalance,
-      referenceTable: 'profiles',
-      referenceId: userId,
-      metadata: { reason: 'initial_signup_credit' },
-    });
+      // Also write the initial deposit ledger entry
+      try {
+        await db.insert(schema.ledgerEntries).values({
+          kind: 'deposit',
+          userId,
+          amountUsd: startingBalance,
+          referenceTable: 'profiles',
+          referenceId: userId,
+          metadata: { reason: 'initial_signup_credit' },
+        });
+      } catch (ledgerErr) {
+        // Log but don't fail the whole request if only the ledger entry fails
+        logger.error({ err: ledgerErr, userId }, 'failed to write initial deposit ledger entry');
+      }
 
-    return created;
+      return created;
+    }
+  } catch (insertErr) {
+    logger.error({ err: insertErr, userId, handle: derivedHandle }, 'failed to insert profile');
+    throw insertErr; // Re-throw to be caught by API handler
   }
 
   // ON CONFLICT fired — another request created the profile concurrently.
@@ -73,6 +85,10 @@ export async function ensureProfile(userId: string, email: string, handle?: stri
     .from(schema.profiles)
     .where(eq(schema.profiles.id, userId))
     .limit(1);
+
+  if (!raceWinner) {
+    logger.error({ userId }, 'ensureProfile: on-conflict race but winner not found in DB');
+  }
 
   return raceWinner ?? null;
 }
