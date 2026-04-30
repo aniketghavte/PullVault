@@ -15,7 +15,7 @@
     "migrate": "tsx src/scripts/migrate.ts",
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
-    "seed": "tsx src/scripts/seed.ts",
+    "seed": "tsx --env-file=../../.env src/scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint configured'"
   },

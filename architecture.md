@@ -154,6 +154,10 @@ After commit, web `PUBLISH`es `pv:drop:<id>:events` with the new `remaining`. Th
 
 **Why this works:** the `WHERE remaining > 0` predicate inside `UPDATE` is atomic in Postgres. Two concurrent transactions racing for the last pack: one updates 1 row, the other gets 0 rows back — no oversell. The CHECK constraint is a defense-in-depth backstop. Idempotency key prevents the double-click case at the protocol layer.
 
+**Drop Status Transitions ("Effective Status"):**
+To avoid needing a highly precise cron job to flip a drop's status from `scheduled` to `live` at the exact second it opens, the system uses an **effective status** pattern at query time in the API. 
+Any drop where `scheduled_at <= NOW()` and `remaining_inventory > 0` is treated and returned as `live` to the client, regardless of what is stored in the database's `status` column. The database `status` column is only actively updated to `sold_out` during the atomic purchase decrement (as seen above).
+
 ### 4.2 Atomic trade (listing buy)
 
 ```sql
