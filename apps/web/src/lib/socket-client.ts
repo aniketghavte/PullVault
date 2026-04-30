@@ -1,6 +1,7 @@
 'use client';
 import { io, type Socket } from 'socket.io-client';
 import { clientEnv } from './env';
+import { getSupabaseBrowserClient } from './supabase/client';
 
 let socket: Socket | null = null;
 
@@ -9,6 +10,16 @@ export function getSocket(): Socket {
   socket = io(clientEnv.NEXT_PUBLIC_REALTIME_URL, {
     transports: ['websocket'],
     withCredentials: true,
+    auth: (cb) => {
+      getSupabaseBrowserClient()
+        .auth.getSession()
+        .then(({ data }) => {
+          cb({ token: data.session?.access_token });
+        })
+        .catch(() => {
+          cb({ token: undefined });
+        });
+    },
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -17,3 +28,4 @@ export function getSocket(): Socket {
   });
   return socket;
 }
+

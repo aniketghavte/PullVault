@@ -50,6 +50,7 @@ The realtime server can also live behind a load balancer with the `@socket.io/re
 ### Why Supabase + Drizzle?
 
 - **Supabase** gives us hosted Postgres, Auth, and JWTs in one place. We use Auth for sessions, but the **system of record is plain Postgres** that we own. We do **not** rely on Supabase Realtime — Socket.io is more flexible for our auction protocol.
+- **Real-time Authentication:** We bridge the Next.js frontend and Express realtime server using Supabase Auth. The browser fetches its active session token and passes it in the Socket.io `auth` handshake. This allows the Express server to securely identify the user, place them in their private event rooms (e.g., for live portfolio balance updates), while still allowing unauthenticated users to view public auctions.
 - **Drizzle ORM**: thin TypeScript-first ORM. We can drop into raw SQL via `sql\`...\`` for the concurrency-critical statements (e.g. `UPDATE ... RETURNING`) without fighting the ORM.
 - **`postgres-js`** driver, with `prepare: false` for the pooled (PgBouncer transaction-mode) connection.
 
