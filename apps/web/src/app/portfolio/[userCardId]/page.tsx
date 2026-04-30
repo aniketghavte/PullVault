@@ -72,6 +72,8 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
   const [listPriceUSD, setListPriceUSD] = useState<string>('');
   const [auctionDurationMinutes, setAuctionDurationMinutes] = useState<number>(AUCTION_DURATIONS_MINUTES[1]);
   const [auctionStartBidUSD, setAuctionStartBidUSD] = useState<string>('');
+  const [actionLoading, setActionLoading] = useState<'list' | 'auction' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Set defaults once loaded
   useEffect(() => {
@@ -131,6 +133,57 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
 
   const canList = card.status === 'held';
   const canAuction = card.status === 'held';
+  const actionBusy = actionLoading !== null;
+
+  const createListing = async () => {
+    if (!canList || actionBusy) return;
+    setActionLoading('list');
+    setActionError(null);
+    try {
+      const res = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userCardId: card.userCardId, priceUSD: listPrice }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        setActionError(json.error?.message || 'Failed to list card');
+        return;
+      }
+      router.push(`/marketplace/${json.data.listingId}`);
+    } catch {
+      setActionError('Network error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const createAuction = async () => {
+    if (!canAuction || actionBusy) return;
+    setActionLoading('auction');
+    setActionError(null);
+    try {
+      const res = await fetch('/api/auctions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userCardId: card.userCardId,
+          startingBidUSD: startBid,
+          durationMinutes: auctionDurationMinutes,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        setActionError(json.error?.message || 'Failed to create auction');
+        return;
+      }
+      router.push(`/auctions/${json.data.auctionId}`);
+    } catch {
+      setActionError('Network error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <section className="px-4 pt-10 pb-16">
@@ -218,7 +271,7 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                 <div className="space-y-2">
                   <div className="text-micro text-mutedSlate">List for sale (USD)</div>
                   <input
-                    disabled={!canList}
+                    disabled={!canList || actionBusy}
                     value={listPriceUSD}
                     onChange={(e) => setListPriceUSD(e.target.value)}
                     type="text"
@@ -226,24 +279,11 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                     placeholder={safeDefaultList}
                   />
                   <ButtonPrimary
-                    disabled={!canList}
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/listings', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userCardId: card.userCardId, priceUSD: listPrice }),
-                        });
-                        const json = await res.json();
-                        if (!json.ok) return alert(json.error?.message || 'Failed to list card');
-                        router.push(`/marketplace/${json.data.listingId}`);
-                      } catch (err) {
-                        alert('Network error');
-                      }
-                    }}
+                    disabled={!canList || actionBusy}
+                    onClick={createListing}
                     className="w-full justify-center"
                   >
-                    List for sale
+                    {actionLoading === 'list' ? 'Listing…' : 'List for sale'}
                   </ButtonPrimary>
                 </div>
 
@@ -253,7 +293,7 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                     <div className="space-y-2">
                       <div className="text-micro text-mutedSlate">Starting bid</div>
                       <input
-                        disabled={!canAuction}
+                        disabled={!canAuction || actionBusy}
                         value={auctionStartBidUSD}
                         onChange={(e) => setAuctionStartBidUSD(e.target.value)}
                         type="text"
@@ -264,7 +304,7 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                     <div className="space-y-2">
                       <div className="text-micro text-mutedSlate">Duration (min)</div>
                       <select
-                        disabled={!canAuction}
+                        disabled={!canAuction || actionBusy}
                         value={auctionDurationMinutes}
                         onChange={(e) => setAuctionDurationMinutes(Number(e.target.value))}
                         className="w-full rounded-sm border border-cardBorder bg-canvas px-4 py-3 text-body outline-none disabled:opacity-50"
@@ -278,30 +318,19 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                   <ButtonPrimary
-                    disabled={!canAuction}
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/auctions', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            userCardId: card.userCardId,
-                            startingBidUSD: startBid,
-                            durationMinutes: auctionDurationMinutes,
-                          }),
-                        });
-                        const json = await res.json();
-                        if (!json.ok) return alert(json.error?.message || 'Failed to create auction');
-                        router.push(`/auctions/${json.data.auctionId}`);
-                      } catch {
-                        alert('Network error');
-                      }
-                    }}
+                    disabled={!canAuction || actionBusy}
+                    onClick={createAuction}
                     className="w-full justify-center"
                   >
-                    Start auction
+                    {actionLoading === 'auction' ? 'Starting auction…' : 'Start auction'}
                   </ButtonPrimary>
                 </div>
+
+                {actionError ? (
+                  <div className="rounded-lg border border-errorRed/30 bg-errorRed/10 px-4 py-2 text-micro text-errorRed">
+                    {actionError}
+                  </div>
+                ) : null}
 
                 <div className="text-micro text-mutedSlate pt-1">
                   Fees: trade {Math.round(Number(PLATFORM.TRADE_FEE_RATE) * 100)}% • auction {Math.round(Number(PLATFORM.AUCTION_FEE_RATE) * 100)}%
@@ -318,6 +347,7 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
               </div>
               <ButtonPillOutline
                 onClick={() => router.push('/portfolio')}
+                disabled={actionBusy}
                 className="w-full justify-center"
               >
                 Back to portfolio

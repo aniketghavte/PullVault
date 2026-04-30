@@ -221,7 +221,7 @@ export default function MarketplaceListingDetailPage({ params }: { params: Promi
 
                 {sellerOwns && listing.status === 'active' ? (
                   <ButtonPillOutline onClick={cancel} disabled={busy} className="w-full justify-center text-errorRed border-errorRed/30 hover:border-errorRed/60">
-                    Cancel listing
+                    {busy ? 'Cancelling…' : 'Cancel listing'}
                   </ButtonPillOutline>
                 ) : null}
 

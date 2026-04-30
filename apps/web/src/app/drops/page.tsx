@@ -60,6 +60,7 @@ export default function DropsPage() {
   const [drops, setDrops] = useState<DropState[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyDropId, setBusyDropId] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef(false);
 
@@ -204,12 +205,19 @@ export default function DropsPage() {
             <button
               type="button"
               onClick={async () => {
-                await fetch('/api/admin/seed-drops', { method: 'POST' });
-                fetchDrops();
+                if (seeding) return;
+                setSeeding(true);
+                try {
+                  await fetch('/api/admin/seed-drops', { method: 'POST' });
+                  fetchDrops();
+                } finally {
+                  setSeeding(false);
+                }
               }}
+              disabled={seeding}
               className="text-actionBlue underline underline-offset-4"
             >
-              Seed test drops
+              {seeding ? 'Seeding drops…' : 'Seed test drops'}
             </button>
           </div>
         )}

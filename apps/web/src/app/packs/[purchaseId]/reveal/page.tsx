@@ -200,7 +200,7 @@ export default function PackRevealPage({ params }: { params: Promise<{ purchaseI
 
                 {revealedCount === 0 ? (
                   <ButtonPrimary onClick={rip} disabled={busy} className="min-w-[220px] justify-center">
-                    Rip it open
+                    {busy ? 'Opening pack…' : 'Rip it open'}
                   </ButtonPrimary>
                 ) : isComplete ? (
                   <ButtonPrimary onClick={() => router.push('/portfolio')} className="min-w-[220px] justify-center">
@@ -208,7 +208,7 @@ export default function PackRevealPage({ params }: { params: Promise<{ purchaseI
                   </ButtonPrimary>
                 ) : (
                   <ButtonPrimary onClick={revealNext} disabled={busy} className="min-w-[220px] justify-center">
-                    Reveal next card
+                    {busy ? 'Revealing…' : 'Reveal next card'}
                   </ButtonPrimary>
                 )}
               </div>
