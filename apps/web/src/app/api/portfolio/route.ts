@@ -1,21 +1,20 @@
 import { handler } from '@/lib/api';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { requireUserId } from '@/lib/auth';
+import { requireUser } from '@/lib/auth';
+import { ensureProfile } from '@/services/ensure-profile';
 import { toMoneyString } from '@pullvault/shared/money';
 
 // GET /api/portfolio — joined view of user's cards + live prices + P&L.
 export const GET = handler(async () => {
-  const userId = await requireUserId();
+  const authUser = await requireUser();
+  const userId = authUser.id;
 
-  const [profile] = await db
-    .select({
-      availableBalanceUsd: schema.profiles.availableBalanceUsd,
-      heldBalanceUsd: schema.profiles.heldBalanceUsd,
-    })
-    .from(schema.profiles)
-    .where(eq(schema.profiles.id, userId))
-    .limit(1);
+  const profile = await ensureProfile(
+    userId,
+    authUser.email ?? '',
+    authUser.user_metadata?.handle,
+  );
 
   const rows = await db
     .select({
