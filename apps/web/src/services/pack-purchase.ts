@@ -197,7 +197,7 @@ export async function purchasePack(
       if (Object.keys(rarityWeights).length === 0) {
         throw new Error(`Pack tier ${tier.id} has no rarity weights defined.`);
       }
-      
+
       const drawnRarities: Rarity[] = [];
 
       for (let i = 0; i < tier.cardsPerPack; i++) {
