@@ -56,5 +56,12 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ dropId
     );
   }
 
+  // Publish to the user's personal portfolio channel so their UI instantly updates balances
+  await publishInternal(
+    REDIS_KEYS.channel.portfolio(userId),
+    INTERNAL_EVENTS.portfolioInvalidated,
+    { userId }
+  );
+
   return { purchaseId: result.purchaseId };
 });
