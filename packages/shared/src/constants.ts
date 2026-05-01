@@ -159,8 +159,36 @@ export const REDIS_KEYS = {
     auctionClose: 'pv_queue_auction_close',
     priceRefresh: 'pv_queue_price_refresh',
     packReveal: 'pv_queue_pack_reveal',
+    // B2 — purchases are enqueued with 0-2s jitter so bots firing at T+0ms
+    // and humans clicking at T+400ms both get a randomized delay, erasing
+    // the "fastest HTTP client wins" advantage.
+    packPurchase: 'pv_queue_pack_purchase',
   },
 } as const;
+
+// =====================================================================
+// B2 — Rate-limit configs. Tuned per endpoint.
+// =====================================================================
+// Intentionally strict on the "money moves" hot paths (purchase/bid/buy)
+// and generous on read endpoints. Values are justified by the work-trial
+// brief: 3 pack buys/min is well above any legitimate user; 5 bids/min
+// still allows spirited bidding but blocks micro-bid scripts.
+export const RATE_LIMITS = {
+  // Pack purchase: 3 per minute per user (strict — the P0 concurrency path).
+  PACK_PURCHASE_USER: { windowMs: 60_000, max: 3 },
+  // Pack purchase: 10 per minute per IP (catches multi-account from one NAT).
+  PACK_PURCHASE_IP: { windowMs: 60_000, max: 10 },
+  // Bid placement: 5 per minute per user (prevents rapid micro-bids).
+  BID_USER: { windowMs: 60_000, max: 5 },
+  // Listing buy: 5 per minute per user (same ceiling as bids).
+  LISTING_BUY_USER: { windowMs: 60_000, max: 5 },
+  // General API: 60 per minute per user — for future per-endpoint use.
+  API_GENERAL_USER: { windowMs: 60_000, max: 60 },
+  // Auth attempts: 5 per 15 minutes per IP — for future use in login routes.
+  AUTH_IP: { windowMs: 900_000, max: 5 },
+} as const;
+
+export type RateLimitKey = keyof typeof RATE_LIMITS;
 
 export const SOCKET_ROOMS = {
   auction: (auctionId: string) => `auction:${auctionId}`,

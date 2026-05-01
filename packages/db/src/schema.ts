@@ -451,6 +451,86 @@ export const portfolioSnapshots = pgTable(
 );
 
 // =====================================================================
+// B2 — Anti-bot signals, scored-account flags, and rate-limit audit log.
+// =====================================================================
+// These tables are append-only (signals + events) or 1-row-per-user
+// (suspicious_accounts) by design. They feed the fraud dashboard in B5
+// and are deliberately decoupled from the hot purchase/bid paths so any
+// write failure is non-fatal (the caller fires and forgets).
+export const botSignals = pgTable(
+  'bot_signals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+    ip: text('ip'),
+    // Signal type enumeration (kept as free text so new heuristics can be
+    // added without a migration):
+    //   'fast_click'        - purchase submitted < 500ms after page load
+    //   'sold_out_attempt'  - user hammered a drop that had zero remaining
+    //   'velocity'          - 3+ purchases in the last 60s
+    //   'no_reveals'        - bought 5+ packs and never opened any
+    signalType: text('signal_type').notNull(),
+    // Raw signal detail — stored as a short string so the dashboard can
+    // render "320ms", "4 purchases/min", etc. without a JSON parse.
+    value: text('value'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userTimeIx: index('bot_signals_user_time_ix').on(t.userId, t.createdAt),
+    typeTimeIx: index('bot_signals_type_time_ix').on(t.signalType, t.createdAt),
+  }),
+);
+
+// One row per user. botScore accumulates from recordBotSignal() upserts.
+// Score thresholds (see services/bot-detection.ts):
+//   0-30   : normal
+//   31-60  : suspicious — add extra jitter to this user's purchases
+//   61-100 : likely bot — surfaced in admin review, NOT auto-blocked.
+export const suspiciousAccounts = pgTable(
+  'suspicious_accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .unique()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    botScore: integer('bot_score').notNull().default(0),
+    flaggedAt: timestamp('flagged_at', { withTimezone: true }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedBy: text('reviewed_by'),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    scoreIx: index('suspicious_accounts_score_ix').on(t.botScore),
+    flaggedIx: index('suspicious_accounts_flagged_ix').on(t.flaggedAt),
+  }),
+);
+
+// Append-only record of every 429 response. Feeds the fraud dashboard
+// (B5): "how many users hit rate limits in the last hour?".
+export const rateLimitEvents = pgTable(
+  'rate_limit_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+    ip: text('ip'),
+    // Logical endpoint — matches the `keyPrefix` passed to checkRateLimit:
+    //   'purchase' | 'bid' | 'listing-buy' | 'auth' | ...
+    endpoint: text('endpoint').notNull(),
+    // 'user' when the per-user window tripped; 'ip' when the per-IP window did.
+    limitType: text('limit_type').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    createdIx: index('rate_limit_events_created_ix').on(t.createdAt),
+    userTimeIx: index('rate_limit_events_user_time_ix').on(t.userId, t.createdAt),
+    endpointTimeIx: index('rate_limit_events_endpoint_time_ix').on(t.endpoint, t.createdAt),
+  }),
+);
+
+// =====================================================================
 // Type helpers (inferred row types)
 // =====================================================================
 export type Profile = typeof profiles.$inferSelect;
@@ -464,3 +544,6 @@ export type Auction = typeof auctions.$inferSelect;
 export type Bid = typeof bids.$inferSelect;
 export type BalanceHold = typeof balanceHolds.$inferSelect;
 export type LedgerEntry = typeof ledgerEntries.$inferSelect;
+export type BotSignal = typeof botSignals.$inferSelect;
+export type SuspiciousAccount = typeof suspiciousAccounts.$inferSelect;
+export type RateLimitEvent = typeof rateLimitEvents.$inferSelect;

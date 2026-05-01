@@ -110,29 +110,94 @@ export default function DropDetailPage({ params }: { params: Promise<{ dropId: s
     return PACK_TIERS.find((t) => t.code === drop.tierCode) ?? null;
   }, [drop]);
 
-  // Buy handler — calls real API
+  // Track when this component rendered so the server can flag sub-500ms
+  // page-load-to-click clicks as bot signals. `useRef` so we capture the
+  // mount time exactly once and don't churn it on re-renders.
+  const pageLoadMsRef = useRef<number>(Date.now());
+
+  // Separate status string for the fairness-queue spinner.
+  // null      → idle
+  // 'queued'  → enqueued, waiting for the BullMQ jitter + worker
+  const [queueStatus, setQueueStatus] = useState<null | 'queued'>(null);
+
+  // B2 — Purchases now enqueue with 0-2000ms jitter. After a successful
+  // enqueue we poll the status endpoint until the worker commits the
+  // transaction, then navigate to the reveal page. If polling exceeds
+  // the timeout we surface a retryable error instead of hanging.
   const buy = async () => {
     if (!drop) return;
     setBusy(true);
+    setQueueStatus(null);
     setError(null);
     try {
       const idempotencyKey = crypto.randomUUID();
       const res = await fetch(`/api/drops/${drop.dropId}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idempotencyKey }),
+        body: JSON.stringify({
+          idempotencyKey,
+          pageLoadTimestamp: pageLoadMsRef.current,
+        }),
       });
       const json = await res.json();
-      if (json.ok) {
-        router.push(`/packs/${json.data.purchaseId}/reveal`);
-      } else {
+
+      // Rate-limit / validation / auth errors come back synchronously.
+      if (!json.ok) {
         setError(json.error?.message ?? 'Purchase failed');
-        fetchDrop(); // Refresh to get current state
+        fetchDrop();
+        return;
+      }
+
+      // Enqueued — poll for the worker's result.
+      const { jobId, timeoutMs } = json.data as {
+        jobId: string;
+        estimatedDelayMs: number;
+        timeoutMs: number;
+      };
+      setQueueStatus('queued');
+
+      const deadline = Date.now() + (timeoutMs ?? 30_000);
+      // Poll every 500ms. Exit when completed/failed or deadline hit.
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (Date.now() > deadline) {
+          setError('Purchase is taking longer than expected — please try again.');
+          fetchDrop();
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 500));
+        const poll = await fetch(`/api/drops/purchase-status/${jobId}`, { cache: 'no-store' });
+        const pj = await poll.json();
+        if (!pj.ok) {
+          setError(pj.error?.message ?? 'Purchase lookup failed');
+          fetchDrop();
+          return;
+        }
+        const data = pj.data as
+          | { status: 'queued' }
+          | { status: 'completed'; result: { success: boolean; purchaseId?: string; errorMessage?: string } }
+          | { status: 'failed'; errorMessage?: string };
+        if (data.status === 'completed') {
+          if (data.result.success && data.result.purchaseId) {
+            router.push(`/packs/${data.result.purchaseId}/reveal`);
+            return;
+          }
+          setError(data.result.errorMessage ?? 'Purchase failed');
+          fetchDrop();
+          return;
+        }
+        if (data.status === 'failed') {
+          setError(data.errorMessage ?? 'Purchase failed');
+          fetchDrop();
+          return;
+        }
+        // still queued — loop
       }
     } catch {
       setError('Network error — please try again.');
     } finally {
       setBusy(false);
+      setQueueStatus(null);
     }
   };
 
@@ -197,7 +262,11 @@ export default function DropDetailPage({ params }: { params: Promise<{ dropId: s
                   disabled={busy}
                   className="w-full justify-center"
                 >
-                  {busy ? 'Buying…' : `Buy 1 pack — $${drop.priceUSD}`}
+                  {queueStatus === 'queued'
+                    ? 'Processing your purchase…'
+                    : busy
+                      ? 'Buying…'
+                      : `Buy 1 pack — $${drop.priceUSD}`}
                 </ButtonPrimary>
               ) : (
                 <ButtonPillOutline disabled className="w-full justify-center">
