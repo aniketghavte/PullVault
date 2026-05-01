@@ -27,6 +27,52 @@ export const PLATFORM = {
   DROP_PURCHASE_RATE_LIMIT_PER_USER_PER_DROP: 5,
 } as const;
 
+// Pack-economics tuning (B1).
+// These targets justify the rarity-weight solver and the simulator output.
+// See architecture.md §5 for the long-form rationale.
+export const PACK_ECONOMICS = {
+  // House margin we aim for on every tier. Below 5% the platform cannot
+  // absorb price shocks on big pulls; above ~25% the EV feels stingy and
+  // user retention suffers.
+  TARGET_MARGIN_PCT: 0.15,
+  // Hard floor: the solver refuses to publish weights below this margin.
+  MIN_MARGIN_PCT: 0.05,
+  // Win rate floor: at least 30% of opened packs must return more than
+  // their cost, otherwise users churn. Above 40% the house bleeds.
+  WIN_RATE_FLOOR: 0.3,
+  WIN_RATE_CEILING: 0.4,
+  // Solver knobs (margin-alpha clamps — see pack-economics.solveRarityWeights).
+  SOLVER_TOLERANCE_PCT: 0.001,
+  SOLVER_MIN_COMMON_WEIGHT: 0.05,
+  SOLVER_MAX_COMMON_WEIGHT: 0.95,
+  // Win-rate adjustment loop (secondary pass AFTER the margin solve).
+  // Hard floor on the common weight during the win-rate correction; tighter
+  // than SOLVER_MIN_COMMON_WEIGHT because once the margin lever has settled
+  // we refuse to build packs where commons < 20% (too volatile, too whale-y).
+  MIN_COMMON_WEIGHT: 0.2,
+  // Ceiling on the rare weight during the win-rate correction. Above 30%
+  // the pack degenerates into a "rare every time" product and loses variance.
+  MAX_RARE_WEIGHT: 0.3,
+  // Step size: each iteration shifts 5% probability from common into rare.
+  WIN_RATE_STEP: 0.05,
+  // Cap on the loop — at step 0.05, 20 iters covers moving 1.0 of mass.
+  WIN_RATE_MAX_ITERATIONS: 20,
+  // Fast MC trial count inside the loop. Must be big enough that win-rate
+  // noise (~1/sqrt(N)) is small vs WIN_RATE_STEP impact. 2000 gives ~±1%.
+  WIN_RATE_CHECK_TRIALS: 2_000,
+  // Deterministic seed for in-loop MC so the loop converges reproducibly.
+  WIN_RATE_CHECK_SEED: 42,
+  // Simulation knobs (admin-facing simulator).
+  DEFAULT_SIM_TRIALS: 10_000,
+  MAX_SIM_TRIALS: 100_000,
+  // --- Auto-rebalancer (B1 Fix 2) ---
+  // "Emergency" band outside which the BullMQ rebalancer will auto-apply
+  // solved weights after a price refresh. Margins between the band are
+  // considered healthy drift and are left alone.
+  EMERGENCY_MARGIN_FLOOR: 0.05,
+  EMERGENCY_MARGIN_CEILING: 0.45,
+} as const;
+
 // Pack tier definitions. Numbers are JUSTIFIED in architecture.md.
 // EV math: pack_price > sum(weight_i * E[price | rarity_i])
 // We aim for ~10–18% house margin per tier on expected value.

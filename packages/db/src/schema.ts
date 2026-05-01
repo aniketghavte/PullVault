@@ -163,6 +163,17 @@ export const packTiers = pgTable('pack_tiers', {
   rarityWeights: jsonb('rarity_weights').notNull(),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  // --- Auto-rebalance audit trail (B1 Fix 2) ---
+  // Set by the BullMQ weight-rebalancer worker whenever a price refresh
+  // pushes a tier's actual margin outside PACK_ECONOMICS.EMERGENCY_MARGIN_*.
+  // Null ⇒ no auto-rebalance has ever fired for this tier.
+  rebalancedAt: timestamp('rebalanced_at', { withTimezone: true }),
+  rebalancedReason: text('rebalanced_reason'),
+  // JSON blob with the PRE-rebalance snapshot, shape:
+  //   { weights: {...}, marginPct: "0.0320", newMarginPct: "0.1500" }
+  // Stored as jsonb so the admin log can reconstruct "before vs after"
+  // without a separate history table.
+  previousWeights: jsonb('previous_weights'),
 });
 
 export const packDrops = pgTable(

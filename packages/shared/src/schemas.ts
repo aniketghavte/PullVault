@@ -64,6 +64,50 @@ export const placeBidSchema = z.object({
   idempotencyKey: z.string().min(8).max(64),
 });
 
+// ---- Admin: pack economics (B1) ----
+// Tier code is intentionally a free-form string here so the catalog can
+// add new tiers (e.g. seasonal 'champion') without a shared-types release.
+// The service validates tierCode against the live `pack_tiers` table.
+const tierCodeString = z
+  .string()
+  .min(1)
+  .max(24)
+  .regex(/^[a-z0-9_]+$/, 'lowercase + underscore only');
+
+// Optional rarity-weight overrides for "what-if" simulation.
+const rarityWeightOverrideSchema = z
+  .record(
+    z.string().min(1).max(24),
+    z.number().min(0).max(1),
+  )
+  .refine(
+    (w) => {
+      const sum = Object.values(w).reduce((acc, n) => acc + n, 0);
+      // Allow small fp drift; the caller may submit 0.99999.
+      return Math.abs(sum - 1) <= 0.01;
+    },
+    { message: 'rarity weights must sum to 1.0 (±0.01)' },
+  );
+
+export const simulatePacksSchema = z.object({
+  // Undefined => simulate every active tier.
+  tierCode: tierCodeString.optional(),
+  // Trials per tier. Capped on the server too; this is the client-friendly cap.
+  trials: z.number().int().positive().max(100_000).optional(),
+  // What-if knobs. Both optional. Apply only to the simulated run; never
+  // persisted.
+  overrideWeights: rarityWeightOverrideSchema.optional(),
+  overridePricePerPackUsd: moneyString.optional(),
+  // Deterministic seed for reproducible runs (smoke tests, screenshots).
+  seed: z.number().int().nonnegative().optional(),
+});
+
+export const solveWeightsSchema = z.object({
+  tierCode: tierCodeString,
+  // 0.05–0.50; defaults to PACK_ECONOMICS.TARGET_MARGIN_PCT in the service.
+  targetMarginPct: z.number().min(0.05).max(0.5).optional(),
+});
+
 // ---- Socket.io events (typed) ----
 // Server -> client
 export const auctionEventSchema = z.discriminatedUnion('type', [

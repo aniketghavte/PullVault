@@ -8,6 +8,13 @@
       "when": 1777383767395,
       "tag": "0000_flowery_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777627094682,
+      "tag": "0001_amazing_namor",
+      "breakpoints": true
     }
   ]
 }

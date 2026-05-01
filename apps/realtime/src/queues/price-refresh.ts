@@ -3,6 +3,7 @@ import { logger } from '@pullvault/shared/logger';
 
 import { env } from '../env.js';
 import { runFullRefresh, runHotRefresh, runSeedIfEmpty } from '../jobs/price-pipeline.js';
+import { rebalanceWeightsIfNeeded } from '../jobs/rebalance.js';
 import { Queue, Worker, bullConnection } from './connections.js';
 
 export type PriceRefreshJob = {
@@ -38,24 +39,46 @@ export function startPriceRefreshWorker() {
       const data = job.data;
       logger.info({ mode: data.mode, jobId: job.id }, 'price-refresh job picked up');
 
+      let refreshResult: Record<string, unknown> = {};
       try {
         if (data.mode === 'full') {
           const { upserts } = await runFullRefresh({ pages: data.pages ?? env.PRICE_REFRESH_FULL_PAGES });
           logger.info({ upserts }, 'price-refresh full complete');
-          return { upserts };
-        }
-        if (data.mode === 'seed') {
+          refreshResult = { upserts };
+        } else if (data.mode === 'seed') {
           const result = await runSeedIfEmpty({ pages: data.pages ?? env.PRICE_REFRESH_FULL_PAGES });
           logger.info(result, 'price-refresh seed complete');
-          return result;
+          refreshResult = result;
+        } else {
+          const { updated } = await runHotRefresh({ sample: data.sample ?? env.PRICE_REFRESH_HOT_SAMPLE });
+          logger.info({ updated }, 'price-refresh hot complete');
+          refreshResult = { updated };
         }
-        const { updated } = await runHotRefresh({ sample: data.sample ?? env.PRICE_REFRESH_HOT_SAMPLE });
-        logger.info({ updated }, 'price-refresh hot complete');
-        return { updated };
       } catch (err) {
         logger.error({ err, mode: data.mode }, 'price-refresh job error');
         throw err;
       }
+
+      // B1 Fix 2: after prices are durably written, check if any tier's
+      // margin drifted into the emergency band and auto-correct. This is
+      // INSIDE a catch because rebalancing is best-effort — prices are
+      // already committed; a rebalance failure must never mark the
+      // price-refresh job as failed (that would trigger a retry and
+      // double-publish ticks).
+      try {
+        const rebalanceResults = await rebalanceWeightsIfNeeded();
+        const rebalanced = rebalanceResults.filter((r) => r.action === 'rebalanced');
+        if (rebalanced.length > 0) {
+          logger.info(
+            { count: rebalanced.length, tiers: rebalanced.map((r) => r.tierCode) },
+            'price-refresh: auto-rebalanced tier(s) after price update',
+          );
+        }
+      } catch (err) {
+        logger.error({ err }, 'price-refresh: rebalancer error (non-fatal)');
+      }
+
+      return refreshResult;
     },
     { connection: bullConnection(), concurrency: 1 },
   );

@@ -298,6 +298,51 @@ This is the **starting** spread. Part of the Part-B deliverable (or equivalent t
 
 We deliberately keep Whale margin slightly higher: high-value packs concentrate variance, and the platform absorbs the risk of a single $1k+ pull. Standard's high margin is justified by the cost of card-draw service overhead and the floor it provides for casual play (pulls a known commodity card 99% of the time).
 
+### 5.2.1 B1 — Pack Economics Algorithm (margin-targeting solver + simulator)
+
+Code: `packages/shared/src/pack-economics.ts` (pure math, no DB), wired into the `/admin/economics` UI via `apps/web/src/services/pack-economics.ts` and the routes `POST /api/admin/simulate-packs` and `POST /api/admin/solve-weights`.
+
+**Targets** (`PACK_ECONOMICS` in `packages/shared/src/constants.ts`):
+
+| Parameter           | Value | Rationale                                                                            |
+| ------------------- | ----- | ------------------------------------------------------------------------------------ |
+| `TARGET_MARGIN_PCT` | 15%   | Low enough that EV feels generous; high enough to absorb a 2σ swing in card prices.  |
+| `MIN_MARGIN_PCT`    |  5%   | Below this the platform cannot survive a single hot card spike. Solver refuses.      |
+| `WIN_RATE_FLOOR`    | 30%   | "3 in 10 packs return more than the price." Below this, retention curves drop hard.  |
+| `WIN_RATE_CEILING`  | 40%   | Above this the house bleeds — pulls feel like cashbacks.                             |
+
+**Backward solver (closed-form, common-as-lever).** We hold the relative shape of the non-common rarities and scale them by a single factor α. Common absorbs whatever is left:
+
+```
+For r != common:  w'_r = α · w_r
+                  w'_c = 1 - α · Σ_{r!=c} w_r
+
+EV/card  = α · A + (1 - α · B) · μ_c     where A = Σ_{r!=c} w_r·μ_r,  B = Σ_{r!=c} w_r
+EV*/card = pricePerPack · (1 - target_margin) / cardsPerPack
+
+α        = (EV*/card - μ_c) / (A - B · μ_c)
+```
+
+Edge cases the solver handles explicitly:
+
+- `A - B·μ_c ≈ 0` → the lever has no effect (common and the non-common bucket have the same expected price). Returned with `reason='no_lever'`; the operator must raise pack price or refresh prices.
+- `α < 0` → target EV is below the all-common floor; pin common to its ceiling and return `reason='price_floor'`.
+- Solved common weight outside `[5%, 95%]` → clamp and report (`capped_min_common` / `capped_max_common`).
+
+The solver is single-iteration because the system is linear in α; no fixed-point loop is required. The verifier then runs Monte-Carlo against the recommended weights so the operator sees both closed-form margin and empirical win rate before promoting.
+
+**Monte-Carlo simulator.** Mirrors the production card-draw exactly:
+
+1. Roll `cardsPerPack` rarities by weighted random (CDF lookup).
+2. For each rarity, uniformly sample one price from the rarity bucket extracted from `cards.market_price_usd`.
+3. Sum to pack EV; compare to pack price for the win-rate counter.
+
+Defaults: 10,000 trials per tier, capped server-side at 100,000. A seedable Mulberry32 RNG (`createSeededRng`) is exposed for reproducible smoke tests and screenshots; production runs use `Math.random`. The simulator returns: mean / p10 / p50 / p90 EV, win rate, average margin, projected revenue / payout / P&L, a per-pack margin histogram, and an empirical rarity-hit-rate vector. The latter is also a sanity check: it should track the configured weights to within Monte-Carlo noise.
+
+**Edge case the reviewers will probe — card price spikes mid-drop.** Pack contents are sealed at *purchase* time (`pack_purchase_cards.draw_price_usd`) using whatever weights the tier had then. Price changes only affect *future* purchases, never opened or unopened-but-paid-for packs. This is enforced by the existing concurrency path (§4.1) — no new schema is needed for B1.
+
+**Why no DB schema change for B1.** The algorithm does not need to persist anything new: tier weights already live in `pack_tiers.rarity_weights` (jsonb), card prices in `cards.market_price_usd`, and per-purchase sealing in `pack_purchase_cards`. The simulator is read-only; the solver is a recommendation engine. Promoting recommended weights is a deliberate two-step manual save (out of scope for B1) so a corrupted price feed cannot silently rewrite the economy.
+
 ### 5.3 Card-draw algorithm (server-side)
 
 1. Roll `cardsPerPack` rarities by `weighted_random(rarityWeights)` — implemented in Postgres as a function over `random()`.
