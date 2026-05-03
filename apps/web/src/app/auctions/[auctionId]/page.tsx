@@ -113,33 +113,45 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
     const handleBid = (data: {
       auctionId: string;
       bidId: string;
-      bidderId: string;
-      bidderHandle: string;
-      amountUSD: string;
+      bidderId: string | null;
+      bidderHandle: string | null;
+      amountUSD: string | null;
       placedAt: string;
       causedExtension: boolean;
+      causedSeal?: boolean;
       newEndAt: string;
+      status?: string;
     }) => {
       if (data.auctionId !== auctionId) return;
-      // Update auction state
+      // B3 — in sealed phase the server sends amount=null / bidder=null.
+      // Don't overwrite local state with nulls: keep the last KNOWN value
+      // but flip the status so the UI can swap to the sealed widget.
+      const sealedIncoming = data.status === 'sealed' || !!data.causedSeal;
       setAuction((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          currentHighBidId: data.bidId,
-          currentHighBidUSD: data.amountUSD,
-          currentHighBidderId: data.bidderId,
+          currentHighBidId: sealedIncoming ? prev.currentHighBidId : data.bidId,
+          currentHighBidUSD: sealedIncoming ? null : (data.amountUSD ?? prev.currentHighBidUSD),
+          currentHighBidderId: sealedIncoming
+            ? null
+            : (data.bidderId ?? prev.currentHighBidderId),
           endAt: data.newEndAt,
-          status: data.causedExtension ? 'extended' : prev.status,
+          status: sealedIncoming
+            ? 'sealed'
+            : data.causedExtension
+              ? 'extended'
+              : (data.status ?? prev.status),
         };
       });
-      // Prepend to bid list
+      // Bid history always gets the timestamp+extension flag even in
+      // sealed mode, but amount + bidder are hidden to match the server.
       setBids((prev) => [
         {
           bidId: data.bidId,
-          bidderId: data.bidderId,
-          bidderHandle: data.bidderHandle,
-          amountUSD: data.amountUSD,
+          bidderId: data.bidderId ?? 'sealed',
+          bidderHandle: data.bidderHandle ?? 'sealed',
+          amountUSD: data.amountUSD ?? 'sealed',
           placedAt: data.placedAt,
           causedExtension: data.causedExtension,
         },
@@ -149,21 +161,28 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
 
     const handleState = (data: {
       auctionId: string;
-      newEndAt: string;
-      extensions: number;
-      currentHighBidUSD: string;
-      currentHighBidderId: string;
+      newEndAt?: string;
+      extensions?: number;
+      currentHighBidUSD: string | null;
+      currentHighBidderId: string | null;
+      status?: string;
     }) => {
       if (data.auctionId !== auctionId) return;
       setAuction((prev) => {
         if (!prev) return prev;
+        const nextStatus = data.status ?? prev.status;
+        const sealed = nextStatus === 'sealed';
         return {
           ...prev,
-          endAt: data.newEndAt,
-          extensions: data.extensions,
-          currentHighBidUSD: data.currentHighBidUSD,
-          currentHighBidderId: data.currentHighBidderId,
-          status: 'extended',
+          endAt: data.newEndAt ?? prev.endAt,
+          extensions: data.extensions ?? prev.extensions,
+          currentHighBidUSD: sealed
+            ? null
+            : (data.currentHighBidUSD ?? prev.currentHighBidUSD),
+          currentHighBidderId: sealed
+            ? null
+            : (data.currentHighBidderId ?? prev.currentHighBidderId),
+          status: nextStatus,
         };
       });
     };
@@ -204,9 +223,14 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
     };
   }, [auctionId]);
 
-  // Compute suggested minimum bid
+  // Compute suggested minimum bid. In sealed phase we deliberately have
+  // no client-side suggestion because revealing `currentHighBid` would
+  // defeat the whole point. We fall back to the starting bid so the
+  // input still has a reasonable floor hint for the user; the server
+  // enforces the real minimum on submit.
   const suggestedMinBid = useMemo(() => {
     if (!auction) return '0.00';
+    if (auction.status === 'sealed') return auction.startingBidUSD;
     const currentHigh = auction.currentHighBidUSD
       ? money(auction.currentHighBidUSD)
       : money(auction.startingBidUSD);
@@ -232,6 +256,7 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
   const leftMs = auction ? endMs - nowMs : 0;
   const antiSnipe = !!auction && leftMs <= PLATFORM.ANTI_SNIPE_WINDOW_SECONDS * 1000 && auction.status !== 'settled';
   const isSettled = auction?.status === 'settled';
+  const isSealed = auction?.status === 'sealed';
   const isSeller = auction?.sellerId === meId;
 
   const placeBid = async () => {
@@ -325,6 +350,18 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
                   </div>
                 ) : null}
 
+                {isSealed ? (
+                  <div className="rounded-lg border border-formFocusViolet/40 bg-formFocusViolet/10 p-4">
+                    <div className="text-micro font-semibold text-formFocusViolet uppercase tracking-[0.28px]">
+                      🔒 Sealed bidding active
+                    </div>
+                    <div className="mt-1 text-bodyLarge text-ink/70">
+                      Current high bid is hidden. Bids are still accepted — the highest bid at
+                      close wins. No one can see what you&apos;re competing against.
+                    </div>
+                  </div>
+                ) : null}
+
                 {isSettled ? (
                   <div className="rounded-lg border border-deepEnterpriseGreen/30 bg-paleGreenWash p-4">
                     <div className="text-micro font-semibold text-deepEnterpriseGreen uppercase tracking-[0.28px]">
@@ -342,7 +379,7 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
                   <div>
                     <div className="text-micro text-mutedSlate">Current high</div>
                     <div className="mt-1 text-bodyLarge font-semibold">
-                      {formatUSD(displayHighBid)}
+                      {isSealed ? '—' : formatUSD(displayHighBid)}
                     </div>
                   </div>
                   <div>
@@ -360,19 +397,30 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
               {bids.length === 0 ? (
                 <div className="py-5 px-4 text-bodyLarge text-ink/70">No bids yet.</div>
               ) : (
-                bids.slice(0, 10).map((b) => (
-                  <ResearchTableRow
-                    key={b.bidId}
-                    left={<span className="text-body font-semibold text-ink">{b.bidderHandle}</span>}
-                    center={
-                      <span className="text-micro text-mutedSlate">
-                        {new Date(b.placedAt).toLocaleTimeString()}
-                        {b.causedExtension ? ' ⏱' : ''}
-                      </span>
-                    }
-                    right={<span className="text-body font-semibold text-ink">{formatUSD(b.amountUSD)}</span>}
-                  />
-                ))
+                bids.slice(0, 10).map((b) => {
+                  const sealedRow = b.bidderHandle === 'sealed' || b.amountUSD === 'sealed';
+                  return (
+                    <ResearchTableRow
+                      key={b.bidId}
+                      left={
+                        <span className="text-body font-semibold text-ink">
+                          {sealedRow ? 'Sealed bidder' : b.bidderHandle}
+                        </span>
+                      }
+                      center={
+                        <span className="text-micro text-mutedSlate">
+                          {new Date(b.placedAt).toLocaleTimeString()}
+                          {b.causedExtension ? ' ⏱' : ''}
+                        </span>
+                      }
+                      right={
+                        <span className="text-body font-semibold text-ink">
+                          {sealedRow ? '🔒 hidden' : formatUSD(b.amountUSD)}
+                        </span>
+                      }
+                    />
+                  );
+                })
               )}
             </ResearchTable>
           </div>
@@ -396,7 +444,18 @@ export default function AuctionRoomPage({ params }: { params: Promise<{ auctionI
                     disabled={isSettled || isSeller}
                   />
                   <div className="text-micro text-mutedSlate">
-                    Suggested min: <span className="font-semibold text-ink">{formatUSD(suggestedMinBid)}</span>
+                    {isSealed ? (
+                      <span>
+                        🔒 Sealed — your own bid is private. Server still enforces min increment.
+                      </span>
+                    ) : (
+                      <>
+                        Suggested min:{' '}
+                        <span className="font-semibold text-ink">
+                          {formatUSD(suggestedMinBid)}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -12,6 +12,8 @@ import { DarkFeatureBand } from '@/components/ui/DarkFeatureBand';
 import { ButtonPrimary } from '@/components/ui/ButtonPrimary';
 import { ButtonPillOutline } from '@/components/ui/ButtonPillOutline';
 
+import { PlatformHealthB5 } from './PlatformHealthB5';
+
 // ---------- Types mirroring the API responses (kept thin on purpose) ----------
 
 type EconomicsData = {
@@ -195,6 +197,8 @@ export default function AdminEconomicsPage() {
         <SimulatorPanel />
         <SolverPanel />
         <RebalanceLogPanel />
+        <PlatformHealthB5 />
+        <AuctionHealthPanel />
       </div>
     </section>
   );
@@ -822,4 +826,250 @@ function formatRelative(iso: string): string {
   if (hr < 48) return `${hr} hour(s) ago`;
   const d = Math.round(hr / 24);
   return `${d} day(s) ago`;
+}
+
+// ---------- B3 — Auction health + flagged activity ----------
+
+type AuctionAnalytics = {
+  windowDays: number;
+  avgPriceToMarketRatio: number;
+  snipeRate: number;
+  flagRate: number;
+  avgParticipation: number;
+  totalAuctions: number;
+  sealedAuctionsCount: number;
+  pendingFlagsCount: number;
+};
+
+type FlaggedActivityRow = {
+  id: string;
+  type: string;
+  referenceId: string | null;
+  reason: string;
+  severity: 'low' | 'medium' | 'high' | string;
+  metadata: Record<string, unknown> | null;
+  reviewed: boolean;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+};
+
+function AuctionHealthPanel() {
+  const [analytics, setAnalytics] = useState<AuctionAnalytics | null>(null);
+  const [flags, setFlags] = useState<FlaggedActivityRow[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setErr(null);
+    Promise.all([
+      fetch('/api/admin/auction-analytics', { cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/admin/flagged-activity?reviewed=false&limit=50', {
+        cache: 'no-store',
+      }).then((r) => r.json()),
+    ])
+      .then(([a, f]) => {
+        if (cancelled) return;
+        if (a.ok) setAnalytics(a.data as AuctionAnalytics);
+        else setErr(a.error?.message ?? 'Failed to load auction analytics');
+        if (f.ok) setFlags((f.data.flags ?? []) as FlaggedActivityRow[]);
+      })
+      .catch(() => {
+        if (!cancelled) setErr('Failed to load auction analytics');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const markReviewed = useCallback(
+    async (id: string) => {
+      setReviewingId(id);
+      try {
+        const res = await fetch('/api/admin/flagged-activity', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error?.message ?? 'Review failed');
+        setRefreshKey((k) => k + 1);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : 'Review failed');
+      } finally {
+        setReviewingId(null);
+      }
+    },
+    [],
+  );
+
+  return (
+    <div className="rounded-lg border border-cardBorder bg-canvas p-6 space-y-6">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <MonoLabel>Auction integrity</MonoLabel>
+          <h2 className="mt-1 font-display text-sectionHeading tracking-tight leading-none">
+            Auction health (last {analytics?.windowDays ?? 30} days)
+          </h2>
+          <p className="text-bodyLarge text-ink/70">
+            Wash-trade detector runs hourly; sealed-bid phase triggers after 3 extensions.
+            Flag queue below surfaces suspected collusion for manual review.
+          </p>
+        </div>
+        <ButtonPillOutline onClick={() => setRefreshKey((k) => k + 1)}>
+          Refresh
+        </ButtonPillOutline>
+      </div>
+
+      {err ? (
+        <div className="rounded-sm border border-coral/40 bg-coral/10 px-4 py-3 text-body">
+          {err}
+        </div>
+      ) : null}
+
+      {analytics ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Price / market ratio"
+            value={`${(analytics.avgPriceToMarketRatio * 100).toFixed(1)}%`}
+            note="Healthy ~80-120%"
+            tone={
+              analytics.avgPriceToMarketRatio >= 0.8 && analytics.avgPriceToMarketRatio <= 1.2
+                ? 'green'
+                : 'red'
+            }
+          />
+          <MetricCard
+            label="Snipe rate"
+            value={`${(analytics.snipeRate * 100).toFixed(1)}%`}
+            note="% of auctions with extensions"
+          />
+          <MetricCard
+            label="Flag rate"
+            value={`${(analytics.flagRate * 100).toFixed(1)}%`}
+            note="% flagged for review"
+            tone={analytics.flagRate > 0.1 ? 'red' : 'green'}
+          />
+          <MetricCard
+            label="Avg bidders / auction"
+            value={analytics.avgParticipation.toFixed(1)}
+            note="Higher = healthier competition"
+          />
+          <MetricCard
+            label="Total auctions"
+            value={analytics.totalAuctions.toLocaleString()}
+            note="Settled in window"
+          />
+          <MetricCard
+            label="Sealed-phase auctions"
+            value={analytics.sealedAuctionsCount.toLocaleString()}
+            note="≥ 3 extensions"
+          />
+          <MetricCard
+            label="Pending flags"
+            value={analytics.pendingFlagsCount.toLocaleString()}
+            note="Unreviewed across all types"
+            tone={analytics.pendingFlagsCount > 0 ? 'red' : 'green'}
+          />
+        </div>
+      ) : (
+        <div className="text-micro text-mutedSlate">Loading auction analytics…</div>
+      )}
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-featureHeading font-semibold">
+            Flagged activity ({flags?.length ?? 0} pending)
+          </h3>
+        </div>
+
+        {flags === null ? (
+          <div className="text-micro text-mutedSlate">Loading flag queue…</div>
+        ) : flags.length === 0 ? (
+          <div className="rounded-sm border border-dashed border-cardBorder bg-canvas/60 p-5 text-bodyLarge text-mutedSlate">
+            No pending flags. Anything suspicious will show up here within an hour of
+            landing in the database.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-body">
+              <thead>
+                <tr className="text-micro text-mutedSlate uppercase border-b border-hairline">
+                  <th className="text-left py-2 pr-4">Type</th>
+                  <th className="text-left py-2 pr-4">Severity</th>
+                  <th className="text-left py-2 pr-4">Reason</th>
+                  <th className="text-left py-2 pr-4">When</th>
+                  <th className="text-right py-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flags.map((f) => (
+                  <tr key={f.id} className="border-b border-hairline align-top">
+                    <td className="py-3 pr-4 font-mono text-micro">{f.type}</td>
+                    <td className="py-3 pr-4 font-mono text-micro">
+                      <span
+                        className={
+                          'rounded-pill px-2 py-0.5 ' +
+                          (f.severity === 'high'
+                            ? 'bg-coral/15 text-coral'
+                            : f.severity === 'low'
+                              ? 'bg-deepEnterpriseGreen/15 text-deepEnterpriseGreen'
+                              : 'bg-yellow-500/15 text-yellow-700')
+                        }
+                      >
+                        {f.severity}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 max-w-[40ch]">{f.reason}</td>
+                    <td className="py-3 pr-4 font-mono text-micro text-mutedSlate whitespace-nowrap">
+                      {formatRelative(f.createdAt)}
+                    </td>
+                    <td className="py-3 text-right">
+                      <ButtonPillOutline
+                        onClick={() => void markReviewed(f.id)}
+                        disabled={reviewingId === f.id}
+                      >
+                        {reviewingId === f.id ? 'Reviewing…' : 'Mark reviewed'}
+                      </ButtonPillOutline>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: 'green' | 'red';
+}) {
+  const toneCls =
+    tone === 'green'
+      ? 'text-deepEnterpriseGreen'
+      : tone === 'red'
+        ? 'text-coral'
+        : 'text-ink';
+  return (
+    <div className="rounded-lg border border-cardBorder bg-canvas/60 p-4">
+      <div className="text-micro text-mutedSlate">{label}</div>
+      <div className={`mt-1 font-display text-featureHeading leading-none ${toneCls}`}>
+        {value}
+      </div>
+      {note ? <div className="mt-1 text-micro text-mutedSlate">{note}</div> : null}
+    </div>
+  );
 }

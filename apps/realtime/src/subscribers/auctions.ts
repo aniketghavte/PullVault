@@ -14,6 +14,12 @@ export function handleAuctionMessage(io: AppSocketServer, channel: string, env: 
     case 'pv.auction.extended':
       io.to(room).emit('auction:state', env.payload);
       return;
+    // B3 — sealed-phase edge event. Web publishes this once (on the
+    // bid that flipped the auction). Clients react by hiding the
+    // current-high widget; subsequent bids land with amount=null.
+    case 'pv.auction.sealed':
+      io.to(room).emit('auction:state', env.payload);
+      return;
     case 'pv.auction.settled':
       io.to(room).emit('auction:settled', env.payload);
       return;

@@ -5,6 +5,9 @@ export const INTERNAL_EVENTS = {
   // Web publishes after a successful state mutation; realtime fans out to sockets.
   bidAccepted: 'pv.bid.accepted',
   auctionExtended: 'pv.auction.extended',
+  // B3 — fired once when an auction flips to sealed-bid phase so the UI
+  // can immediately swap the current-high widget for the "sealed" badge.
+  auctionSealed: 'pv.auction.sealed',
   auctionSettled: 'pv.auction.settled',
   dropInventoryChanged: 'pv.drop.inventory_changed',
   dropSoldOut: 'pv.drop.sold_out',

@@ -44,6 +44,9 @@ PullVault is a **TypeScript monorepo** with two long-running processes:
 | Long-lived WebSocket connections                 | Express + Socket.io   | Vercel kills long-lived sockets. Need a real Node proc. |
 | Auction timer + anti-snipe + settlement worker   | BullMQ in `realtime`  | Needs a persistent worker. Delayed jobs at `end_at`.    |
 | Price refresh (cron-style)                       | BullMQ in `realtime`  | Same as above.                                          |
+| B1 auto-rebalance worker                         | BullMQ in `realtime`  | Triggered after every price refresh; writes new weights atomically. |
+| B2 pack-purchase fairness queue                  | BullMQ in `realtime`  | 0–2000 ms jitter delay, then HTTP callback into the web `/api/internal/packs/purchase` txn. |
+| B3 wash-trade detection                          | BullMQ repeatable in `realtime` | Hourly; idempotent heuristics writing to `flagged_activity`. |
 
 The realtime server can also live behind a load balancer with the `@socket.io/redis-adapter` later if we need >1 instance — Redis is already in the stack.
 
@@ -71,11 +74,29 @@ Money never touches `number`. All money values are stored as `NUMERIC(14, 2)` in
 pullvault/
 ├── apps/
 │   ├── web/                # Next.js 14 (App Router) + REST API routes
+│   │   └── src/app/
+│   │       ├── api/
+│   │       │   ├── admin/              # B1 simulate/solve + B3 analytics/flags
+│   │       │   │                       # + B5 fraud-metrics, economic-health, user-health
+│   │       │   ├── audit/packs/        # B4/B5 public chi-squared audit log
+│   │       │   ├── drops/.../purchase/ # B2 rate limit + queue enqueue
+│   │       │   ├── internal/packs/purchase/  # B2 callback from realtime worker
+│   │       │   └── packs/[purchaseId]/verify-data/  # B4 public verifier feed
+│   │       ├── admin/economics/        # B1/B3/B5 panels
+│   │       └── verify/[purchaseId]/    # B4 client-only provably-fair verifier
 │   └── realtime/           # Express + Socket.io + BullMQ workers
+│       ├── src/queues/     # pack-purchase (B2 fairness), wash-trade (B3),
+│       │                   # price-refresh, auction-close, connections
+│       └── src/jobs/       # wash-trade-detector (B3), rebalance (B1), price-pipeline
 ├── packages/
-│   ├── db/                 # Drizzle schema, migrations, seed scripts
-│   └── shared/             # money, types, zod schemas, redis, constants
+│   ├── db/                 # Drizzle schema, migrations 0000–0004, seed scripts
+│   └── shared/             # money, types, zod schemas, redis, constants,
+│                           #   rate-limiter (B2), bot-detection (B2),
+│                           #   pack-economics (B1), provably-fair (B4),
+│                           #   purchase-queue (B2)
+├── docs/                   # Per-feature deep dives (b2, b3, b4, b5)
 ├── architecture.md         # ← this file
+├── status.md               # Build progress tracker
 └── README.md
 ```
 
@@ -103,8 +124,26 @@ Workspace tool: **pnpm**. Type sharing is via TS source — `transpilePackages` 
 | `balance_holds`        | One hold row per active bid. Lifecycle: `held → released | consumed`.        | `amount > 0`. Sum of `held` rows for a user = `profiles.held_balance` (invariant maintained per-txn).                                               |
 | `ledger_entries`       | Double-entry ledger. Every money move emits at least 2 rows in 1 txn.        | Source of truth for the economics dashboard. Platform fee rows have `user_id = NULL`.                                                               |
 | `portfolio_snapshots`  | Time-series for the portfolio chart. Written by a low-freq job.              | —                                                                                                                                                   |
+| `bot_signals` (B2)     | Append-only behavioral events (fast_click, sold_out_attempt, velocity, no_reveals). | Indexed `(user_id, created_at)` and `(signal_type, created_at)`. Fire-and-forget writes from purchase hot path.                              |
+| `suspicious_accounts` (B2) | One row per user with accumulated `bot_score` (0–100).                   | UNIQUE `(user_id)`. Upserted atomically; `flagged_at` stamped once on first threshold crossing; reviewers set `reviewed_at`.                     |
+| `rate_limit_events` (B2) | Audit log of every 429 the web tier returned (`endpoint`, `limit_type`).  | Indexed `(created_at)`, `(endpoint, created_at)`. Powers B5 fraud dashboard.                                                                       |
+| `flagged_activity` (B3)| Output of the wash-trade detector: `wash_trade`, `low_price_auction`, `circular_trade`. | Dedupe by `(type, reference_id)` at insert time; `reviewed`/`reviewed_at` flip via admin PATCH.                                         |
+| `pack_tiers` **+ B1**  | Existing table now carries auto-rebalance audit columns.                     | `rebalanced_at`, `rebalanced_reason`, `previous_weights` (jsonb snapshot).                                                                         |
+| `pack_purchases` **+ B4** | Existing table now carries provably-fair commitment columns.              | `server_seed` (nullable, redacted until reveal), `server_seed_hash` (non-null, public), `client_seed`, `nonce`, `verified_at`.                  |
+| `pack_purchase_cards` **+ B4** | Existing sealed-cards table now carries explicit draw ordinal.       | `draw_index` — ordinal used in the HMAC message, decoupled from PK `position` for verifier stability.                                            |
+| `auctions.status` **+ B3** | Enum extended with `sealed` state between `extended` and `settling`.     | `status IN ('scheduled','live','extended','sealed','settling','settled')`. Bids still accepted when sealed; high bid redacted from reads.        |
 
 RLS is enabled on user-scoped tables. App writes use the **service role key** (RLS bypassed); the anon key is only used for the public marketplace read paths.
+
+### 3.1 Migration history (Drizzle)
+
+| Migration                       | Adds                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `0000_flowery_smiling_tiger`    | Initial schema (all Part A tables).                                                        |
+| `0001_amazing_namor`            | **B1**: `pack_tiers.rebalanced_at`, `pack_tiers.rebalanced_reason`, `pack_tiers.previous_weights`. |
+| `0002_flowery_darkhawk`         | **B2**: `bot_signals`, `suspicious_accounts`, `rate_limit_events` + FKs + indexes.         |
+| `0003_easy_random`              | **B3**: `flagged_activity` table + `auction_status.sealed` enum value.                     |
+| `0004_lumpy_terrax`             | **B4**: `pack_purchases` seed/hash/client/nonce/verified_at columns + `pack_purchase_cards.draw_index`. Backfills legacy rows with `server_seed_hash = 'legacy-purchase-not-verifiable'` before setting `NOT NULL`. |
 
 ---
 
@@ -185,6 +224,16 @@ Constraints that bulletproof this:
 - Partial UNIQUE on `listings(user_card_id) WHERE status='active'` makes double-listing impossible.
 - `user_cards.status = 'listed'` is the gate that prevents a seller from also auctioning the same card. The auction creation path checks this and sets `status = 'in_auction'`, which is mutually exclusive.
 
+### 4.2.1 B2 — Purchase fairness queue (Layer 2)
+
+The pack-drop purchase route is no longer a synchronous DB transaction on the web request. It is a three-stage pipeline:
+
+1. **Edge guard (web)** — atomic Redis Lua sliding-window limiter (`packages/shared/src/rate-limiter.ts`). Two windows per request: per-user (strict) + per-IP (loose). 429s are logged to `rate_limit_events` with proper `Retry-After` / `X-RateLimit-*` headers.
+2. **Fire-and-forget bot signals** — `runPurchaseBotChecks` records `fast_click` (page-load-to-click < 500ms), `sold_out_attempt`, and `velocity` signals. Writes are non-blocking; scores accumulate in `suspicious_accounts` via atomic `onConflictDoUpdate`.
+3. **Fairness queue (BullMQ)** — the route enqueues a job `purchase:{userId}:{idempotencyKey}` with a **random 0–2000 ms delay**. The realtime worker picks it up after the jitter and calls back into `/api/internal/packs/purchase` (protected by `x-realtime-token`), which runs the unchanged atomic `purchasePack` transaction.
+
+The client gets a `jobId` + `readyAtMs` and polls `/api/drops/purchase-status/[jobId]`. The unchanged transaction from §4.1 still guarantees no oversell; the queue just removes the "fastest-HTTP-client-wins" advantage during drop bursts. BullMQ jobs use `attempts: 1` so we never double-publish; idempotency at the DB layer catches retries regardless.
+
 ### 4.3 Bids (the auction-room hot path)
 
 A bid is one transaction, locked on the auction row:
@@ -238,6 +287,40 @@ COMMIT;
 After commit, web publishes `pv.bid.accepted` (and, if extended, also `pv.auction.extended`) to `pv:auction:<id>:events`. The realtime server fans out to the room with `auction:bid` (and updates the timer).
 
 If anti-snipe extended the end time, web also schedules a fresh BullMQ job for the new `end_at`. The auction-close worker is idempotent: it re-locks the row, and if `end_at > now()` it bails out (the new job will arrive at the right time).
+
+### 4.3.1 B3 — Bid validation rules (inside the same txn)
+
+Three additional checks run inside the `SELECT ... FOR UPDATE` block, *before* funds are held:
+
+- **Self-bid block** — `bidder_id != seller_id` → error `SELF_BID_FORBIDDEN` (HTTP 403).
+- **Fat-finger cap** — reject if `amount > 10 × cards.market_price_usd` (only enforced when market price > 0) → `BID_EXCEEDS_MAXIMUM` (409).
+- **Frequency throttle** — reject if the same user placed another bid on the same auction `< 5s` ago → `BID_TOO_FREQUENT` (429).
+
+These live in `apps/web/src/services/auction-service.ts`. Failures roll back the entire transaction — no hold, no bid row, no extension.
+
+### 4.3.2 B3 — Sealed-bid phase
+
+If after the anti-snipe check `extensions ≥ 3` AND `end_at - now() ≤ 60s`, the bid transition flips `auctions.status` to `sealed`. Sealed behavior:
+
+- **Writes** continue normally — bids are still held, outbid refunds still release, ledger still writes.
+- **Reads are redacted** on every surface:
+  - `GET /api/auctions/[auctionId]` returns `currentHighBidUSD: null`, `currentHighBidderId: null`, and blanks `bidderId`/`bidderHandle`/`amountUSD` in `recentBids`.
+  - Socket handshake `auction:join` snapshot applies the same redaction.
+  - Broadcast events (`auction:bid`, `auction:state`) omit the same fields while sealed.
+- **Optimistic concurrency is relaxed** — because the client sees `currentHighBidId = null`, the `expectedCurrentHighBidId` check is skipped when `auction.status === 'sealed'`. This is a deliberate trade-off: the client is intentionally blind, so the server cannot use client-supplied expectation as a race guard. The `FOR UPDATE` lock still serializes bids.
+- On transition, we publish `pv.auction.sealed` (`INTERNAL_EVENTS.auctionSealed`) so watchers immediately see the banner without waiting for the next bid.
+
+Settlement proceeds unchanged from `sealed` → `settling` → `settled`.
+
+### 4.3.3 B3 — Wash-trade detection (hourly)
+
+`apps/realtime/src/jobs/wash-trade-detector.ts`, scheduled by `apps/realtime/src/queues/wash-trade.ts` as a repeatable BullMQ job with a fixed `jobId`. Three heuristics run every hour:
+
+- **wash_trade** — same two users traded the same card more than once within 7 days (from `listings`).
+- **low_price_auction** — settled auction with ≤1 unique bidder AND `final_price_usd < 0.5 × market_price_usd`.
+- **circular_trade** — user A sold to B on `listings`, then B sold the same card back to A within 30 days.
+
+Each heuristic is **idempotent**: it checks `flagged_activity (type, reference_id)` before inserting, so the hourly re-run never duplicates flags. Review state stays intact.
 
 **Server crash recovery:** the auction state is fully on disk. On startup, the realtime server runs a sweeper that finds `auctions WHERE status IN ('live','extended') AND end_at <= now()` and enqueues close jobs for them; for `end_at > now()` it (re)schedules close jobs. WebSocket reconnects pull a fresh `auction:state` snapshot from the DB.
 
@@ -343,11 +426,36 @@ Defaults: 10,000 trials per tier, capped server-side at 100,000. A seedable Mulb
 
 **Why no DB schema change for B1.** The algorithm does not need to persist anything new: tier weights already live in `pack_tiers.rarity_weights` (jsonb), card prices in `cards.market_price_usd`, and per-purchase sealing in `pack_purchase_cards`. The simulator is read-only; the solver is a recommendation engine. Promoting recommended weights is a deliberate two-step manual save (out of scope for B1) so a corrupted price feed cannot silently rewrite the economy.
 
-### 5.3 Card-draw algorithm (server-side)
+### 5.2.2 B1 — Auto-rebalancing worker
 
-1. Roll `cardsPerPack` rarities by `weighted_random(rarityWeights)` — implemented in Postgres as a function over `random()`.
-2. For each chosen rarity, `SELECT id FROM cards WHERE rarity = $r ORDER BY random() LIMIT 1` (server-seeded; client cannot influence). For performance at scale we can pre-bucket card IDs in Redis sets and pull randomly there.
-3. Snapshot the card's current `market_price_usd` into `pack_purchase_cards.draw_price_usd` — that becomes the user's cost basis for P&L.
+`apps/realtime/src/jobs/rebalance.ts` listens on the same Redis channel that the price-refresh pipeline publishes to. Flow:
+
+1. After every price refresh (`pv:prices:refreshed`), recompute per-tier EV using the live `cards.market_price_usd` values.
+2. If any tier's **computed margin** drifts outside `[MIN_MARGIN_PCT, TARGET_MARGIN_PCT + 10%]` or its **simulated win rate** exits `[WIN_RATE_FLOOR, WIN_RATE_CEILING]`, run `solveRarityWeights` for that tier.
+3. Persist the solver's output into `pack_tiers.rarity_weights` and stamp `rebalanced_at`, `rebalanced_reason`, `previous_weights`. Admins can diff/roll back from `/admin/economics`.
+
+The worker is **advisory-only by default** in production — new weights apply to future purchases (existing `pack_purchase_cards` are already sealed per §4.1). A dry-run flag lets the admin preview diffs without writing.
+
+### 5.3 Card-draw algorithm (server-side, B4 provably-fair)
+
+Prior card-draw used `Math.random()`. It is now fully deterministic per-purchase using commit-reveal HMAC-SHA256.
+
+**At purchase time** (`apps/web/src/services/pack-purchase.ts`, same txn as §4.1):
+
+1. Generate `serverSeed = randomBytes(32).hex` and `serverSeedHash = SHA256(serverSeed)` via `generateSeedPair()` in `packages/shared/src/provably-fair.ts`.
+2. `clientSeed = body.clientSeed ?? purchaseId` (user-provided or the purchase UUID itself — both are known to the user).
+3. Insert `pack_purchases` row with `server_seed_hash` (public), `server_seed = NULL` (hidden until reveal), `client_seed`, `nonce = 0`.
+4. For each draw `i` in `0..cardsPerPack-1`:
+   - `message = "${clientSeed}:${purchaseId}:${nonce}:${i}"`
+   - `float01 = HMAC-SHA256(serverSeed, message) → first 8 bytes as big-endian uint → / 2^64`
+   - `rarity = floatToRarity(float01, tier.rarityWeights)` — CDF walk over a fixed `DRAW_ORDER = ['common','uncommon','rare','ultra_rare','secret_rare']` so the verifier has a canonical order.
+   - Pick a random card of that rarity, insert `pack_purchase_cards` with `draw_index = i` and `draw_price_usd`.
+
+**At reveal time** (`apps/web/src/app/api/packs/[purchaseId]/reveal/route.ts`): on the *last* card reveal, `UPDATE pack_purchases SET server_seed = $purchase.server_seed` — this is the "reveal" step that makes the purchase verifiable.
+
+**Read-side redaction** (`GET /api/packs/[purchaseId]`): returns `serverSeed = purchase.sealed ? null : purchase.serverSeed`, and **always** returns `serverSeedHash` + `clientSeed`. This preserves commit-reveal: users see the hash at purchase, the seed only after they've opened everything.
+
+**Verifier** (`/verify/[purchaseId]`, client-only): fetches data from `GET /api/packs/[purchaseId]/verify-data` (public, no auth), re-runs `verifyPurchase(serverSeed, serverSeedHash, clientSeed, drawIndices, rarityWeights)` entirely in the browser (Web Crypto API), and POSTs back to stamp `verified_at`. The page supports **manual seed tampering** so reviewers can see a hash-mismatch failure in real time.
 
 All of this happens in the same transaction as the inventory decrement, so a sold-out drop never produces orphan card grants.
 
@@ -443,10 +551,32 @@ Estimating concurrent active users (CCU) ≈ ~5% of MAU = 500 CCU.
 - Web → Realtime internal endpoints require `x-realtime-token` header matching `REALTIME_INTERNAL_TOKEN`.
 - All mutation endpoints require an **idempotency key** so a flaky retry does not double-spend.
 - Input is validated with **zod** at the route boundary; nothing untyped enters services.
+- **B2 rate limiting**: every mutation hot path (`/drops/[id]/purchase`, `/auctions/[id]/bid`, `/listings/[id]/buy`) passes through an atomic Redis Lua sliding-window limiter before any DB work. Limits are configured in `packages/shared/src/rate-limiter.ts`; 429s are logged to `rate_limit_events`.
+- **B2 bot detection**: the platform **never silently auto-blocks**. `suspicious_accounts.bot_score` ≥ 50 stamps `flagged_at` for manual review on `/admin/economics`. Auto-block is reserved for users hitting `5×` the rate limit inside one hour — still surfaced in the dashboard, never acted on by the hot path.
+- **B3 auction hardening**: self-bidding, fat-finger (>10× market price), and rapid-fire (<5s) bids are rejected inside the bid transaction. Sealed-bid phase redacts the high bid across REST + WebSocket during the final 60s of heavily-extended auctions.
+- **B4 provably-fair**: every pack purchase commits to a hashed server seed before the user opens; reveal exposes the seed; any user can re-verify in-browser with zero server trust. The public `/api/audit/packs` endpoint runs a chi-squared test over the last 1000 opens — an external reviewer can refute platform cheating without credentials.
 
 ---
 
-## 11. Scope Cuts & Trade-offs
+## 11. Admin & Audit Surface (B5 Platform Health Dashboard)
+
+`/admin/economics` is now the single pane of glass for operators. It fetches four endpoints in parallel and renders five panels:
+
+| Panel                         | Endpoint                              | Highlights                                                                 |
+| ----------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| Pack Economics + Rebalance    | `/api/admin/economics-summary`, `/api/admin/rebalance-log` | Live EV, margin per tier, B1 rebalance audit log.                |
+| Auction Health                | `/api/admin/auction-analytics`        | Snipe rate, flag rate, avg bidders, sealed count (last 30d).               |
+| Flagged Activity              | `/api/admin/flagged-activity` (GET + PATCH `reviewed`) | Wash-trade / low-price / circular-trade flags from B3.         |
+| Fraud Metrics                 | `/api/admin/fraud-metrics`            | 24h rate limit hits by endpoint + hourly sparkline, 7d bot signals by type, top-20 suspicious accounts. |
+| Economic Health (with alerts) | `/api/admin/economic-health`          | Rolling 24h actual margin per tier (from `price_paid`/`card_market_price`), 30d revenue by stream, 7d daily revenue trend, projected monthly revenue. Alerts outside `[5%, 45%]`. |
+| Fairness Audit                | `/api/audit/packs` (public, reused)   | Chi-squared over last 1000 opens; pass/fail at `p > 0.05`; verification-page usage count. |
+| User Health                   | `/api/admin/user-health`              | 7d drop engagement (sell-through), 30d auction participation, D7 retention proxy, new vs returning buyers, portfolio size stats. |
+
+All B5 routes use Drizzle raw SQL (`db.execute`) with results cast to `Record<string, unknown>[]` for type safety. The page has a single **Refresh dashboard** button and per-panel "Data as of" timestamps so operators always know the vintage of what they're looking at. The `MetricCard` component in `apps/web/src/components/admin/` unifies label/value/note/alert styling across panels.
+
+---
+
+## 12. Scope Cuts & Trade-offs
 
 We deliberately did NOT build (yet):
 - **Pack reveal animation polish.** The reveal logic is correct; visuals are minimal.

@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api';
 import { ERROR_CODES } from '@pullvault/shared';
 import { logger } from '@pullvault/shared/logger';
 import type { Rarity } from '@pullvault/shared/constants';
+import { floatToRarity, generateDrawFloat, generateSeedPair } from '@pullvault/shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,6 +17,7 @@ import type { Rarity } from '@pullvault/shared/constants';
 interface PurchasePackInput {
   dropId: string;
   idempotencyKey: string;
+  clientSeed?: string;
 }
 
 export interface PurchasePackResult {
@@ -25,22 +27,6 @@ export interface PurchasePackResult {
   remaining: number;
   pricePaidUsd: string;
   status: string; // 'live' | 'sold_out'
-}
-
-// ---------------------------------------------------------------------------
-// Weighted rarity roll (server-side, non-deterministic)
-// ---------------------------------------------------------------------------
-
-function weightedRandomRarity(rarityWeights: Record<string, number>): Rarity {
-  const r = Math.random();
-  let acc = 0;
-  for (const [rarity, weight] of Object.entries(rarityWeights)) {
-    acc += weight;
-    if (r <= acc) return rarity as Rarity;
-  }
-  // Fallback to last entry (floating-point edge case)
-  const keys = Object.keys(rarityWeights);
-  return (keys[keys.length - 1] ?? 'common') as Rarity;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,6 +130,8 @@ export async function purchasePack(
       // 4. Idempotent purchase row
       //    ON CONFLICT → the client retried; return the prior purchase.
       // -----------------------------------------------------------------------
+      const { serverSeed, serverSeedHash } = await generateSeedPair();
+
       const [inserted] = await tx
         .insert(schema.packPurchases)
         .values({
@@ -152,6 +140,10 @@ export async function purchasePack(
           tierId: decremented.tierId,
           pricePaidUsd: price,
           idempotencyKey: input.idempotencyKey,
+          serverSeed,
+          serverSeedHash,
+          clientSeed: input.clientSeed,
+          nonce: 0,
         })
         .onConflictDoNothing({
           target: [schema.packPurchases.userId, schema.packPurchases.idempotencyKey],
@@ -198,15 +190,18 @@ export async function purchasePack(
         throw new Error(`Pack tier ${tier.id} has no rarity weights defined.`);
       }
 
+      const clientSeed = input.clientSeed ?? purchaseId;
       const drawnRarities: Rarity[] = [];
 
       for (let i = 0; i < tier.cardsPerPack; i++) {
-        drawnRarities.push(weightedRandomRarity(rarityWeights));
+        const float = await generateDrawFloat(serverSeed, clientSeed, purchaseId, i);
+        drawnRarities.push(floatToRarity(float, rarityWeights) as Rarity);
       }
 
       // For each rarity, pick a random card from that bucket
       const cardDraws: Array<{
         position: number;
+        drawIndex: number;
         cardId: string;
         drawPriceUsd: string;
       }> = [];
@@ -240,12 +235,14 @@ export async function purchasePack(
 
           cardDraws.push({
             position: i,
+            drawIndex: i,
             cardId: fallbackCard.id,
             drawPriceUsd: fallbackCard.marketPriceUsd,
           });
         } else {
           cardDraws.push({
             position: i,
+            drawIndex: i,
             cardId: card.id,
             drawPriceUsd: card.marketPriceUsd,
           });
@@ -260,6 +257,7 @@ export async function purchasePack(
           cardDraws.map((d) => ({
             purchaseId,
             position: d.position,
+            drawIndex: d.drawIndex,
             cardId: d.cardId,
             drawPriceUsd: d.drawPriceUsd,
           })),

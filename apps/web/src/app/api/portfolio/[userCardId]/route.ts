@@ -14,6 +14,8 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ userCa
     .select({
       userCardId: schema.userCards.id,
       status: schema.userCards.status,
+      acquiredFrom: schema.userCards.acquiredFrom,
+      sourceRefId: schema.userCards.sourceRefId,
       acquiredPriceUsd: schema.userCards.acquiredPriceUsd,
       acquiredAt: schema.userCards.acquiredAt,
       cardId: schema.cards.id,
@@ -65,6 +67,8 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ userCa
     card: {
       userCardId: row.userCardId,
       status: row.status,
+      acquiredFrom: row.acquiredFrom,
+      sourceRefId: row.sourceRefId,
       acquiredPriceUSD: toMoneyString(row.acquiredPriceUsd),
       acquiredAt: row.acquiredAt.toISOString(),
       cardId: row.cardId,

@@ -108,6 +108,7 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ dropId
       userId,
       dropId: parsed.data.dropId,
       idempotencyKey: parsed.data.idempotencyKey,
+      clientSeed: parsed.data.clientSeed,
       requestedAt: Date.now(),
       ip,
     } satisfies PurchaseJobData,

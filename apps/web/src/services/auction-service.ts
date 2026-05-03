@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import type { DB } from '@pullvault/db';
 import { schema } from '@/lib/db';
 import { money, toMoneyString, feeOf } from '@pullvault/shared/money';
@@ -39,6 +39,10 @@ export interface PlaceBidResult {
   newExtensions: number;
   previousHighBidderId: string | null;
   previousHighBidAmount: string | null;
+  /** True when this bid caused the auction to flip to sealed-bid phase. */
+  causedSeal: boolean;
+  /** Post-commit status — one of 'live' | 'extended' | 'sealed'. */
+  newStatus: 'live' | 'extended' | 'sealed';
 }
 
 // ---------------------------------------------------------------------------
@@ -156,8 +160,9 @@ export async function placeBid(
       throw new ApiError(ERROR_CODES.NOT_FOUND, 'Auction not found');
     }
 
-    // 2. Validate status
-    if (!['live', 'extended'].includes(auction.status)) {
+    // 2. Validate status. B3: 'sealed' accepts bids too — status check
+    // must allow it, only the broadcast layer redacts the high bid.
+    if (!['live', 'extended', 'sealed'].includes(auction.status)) {
       throw new ApiError(ERROR_CODES.AUCTION_CLOSED, 'Auction is not accepting bids');
     }
 
@@ -165,13 +170,24 @@ export async function placeBid(
       throw new ApiError(ERROR_CODES.AUCTION_CLOSED, 'Auction has ended');
     }
 
-    // Cannot bid on your own auction
+    // B3 Rule 3 — explicit self-bid block with distinct error code. The
+    // UI key-branches on this to show a permission message instead of a
+    // generic validation error.
     if (auction.sellerId === userId) {
-      throw new ApiError(ERROR_CODES.VALIDATION, 'You cannot bid on your own auction');
+      throw new ApiError(ERROR_CODES.SELF_BID_FORBIDDEN, 'You cannot bid on your own auction');
     }
 
-    // 3. Optimistic concurrency check
-    if (input.expectedCurrentHighBidId !== (auction.currentHighBidId ?? null)) {
+    // 3. Optimistic concurrency check.
+    // B3 — in sealed phase the client does NOT know the current high bid
+    // id (it's been redacted from both the REST detail endpoint and the
+    // socket state). Enforcing this check there would make every sealed
+    // bid spuriously fail with BID_OUTBID. The whole point of sealed
+    // phase is that no-one sees what they're competing against, so the
+    // race condition this check protects against simply doesn't apply.
+    if (
+      auction.status !== 'sealed' &&
+      input.expectedCurrentHighBidId !== (auction.currentHighBidId ?? null)
+    ) {
       throw new ApiError(
         ERROR_CODES.BID_OUTBID,
         'Another bid was placed. Refresh and try again.',
@@ -201,6 +217,64 @@ export async function placeBid(
         ERROR_CODES.BID_TOO_LOW,
         `Bid must be at least ${toMoneyString(minRequired)}`,
       );
+    }
+
+    // -----------------------------------------------------------------
+    // B3 Rule 1 — fat-finger protection.
+    // Look up the card's current market price via the auction's
+    // user_card link. If it's zero (price feed not seeded) we skip the
+    // check rather than block the auction; the catalog refresh will
+    // populate prices soon after launch.
+    // -----------------------------------------------------------------
+    const [cardPriceRow] = await tx
+      .select({ marketPriceUsd: schema.cards.marketPriceUsd })
+      .from(schema.userCards)
+      .innerJoin(schema.cards, eq(schema.cards.id, schema.userCards.cardId))
+      .where(eq(schema.userCards.id, auction.userCardId))
+      .limit(1);
+
+    if (cardPriceRow) {
+      const marketPrice = money(cardPriceRow.marketPriceUsd);
+      if (marketPrice.gt(0)) {
+        const maxAllowed = marketPrice.times(PLATFORM.MAX_BID_MARKET_MULTIPLIER);
+        if (money(input.amountUSD).gt(maxAllowed)) {
+          throw new ApiError(
+            ERROR_CODES.BID_EXCEEDS_MAXIMUM,
+            `Bid of ${toMoneyString(money(input.amountUSD))} exceeds maximum ` +
+              `(${PLATFORM.MAX_BID_MARKET_MULTIPLIER}x market value ` +
+              `${toMoneyString(marketPrice)} = ${toMoneyString(maxAllowed)})`,
+          );
+        }
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // B3 Rule 2 — throttle: min 5s between bids from the same user on
+    // this auction. Done INSIDE the txn so two concurrent bids from the
+    // same user can never both squeak through a race.
+    // -----------------------------------------------------------------
+    const [lastUserBid] = await tx
+      .select({ placedAt: schema.bids.placedAt })
+      .from(schema.bids)
+      .where(
+        and(
+          eq(schema.bids.auctionId, input.auctionId),
+          eq(schema.bids.bidderId, userId),
+        ),
+      )
+      .orderBy(desc(schema.bids.placedAt))
+      .limit(1);
+
+    if (lastUserBid) {
+      const elapsedSec = (Date.now() - lastUserBid.placedAt.getTime()) / 1000;
+      const min = PLATFORM.MIN_BID_INTERVAL_SECONDS;
+      if (elapsedSec < min) {
+        const wait = Math.max(1, Math.ceil(min - elapsedSec));
+        throw new ApiError(
+          ERROR_CODES.BID_TOO_FREQUENT,
+          `Please wait ${wait} more second(s) before placing another bid.`,
+        );
+      }
     }
 
     // 5. Lock buyer profile and check funds
@@ -263,12 +337,22 @@ export async function placeBid(
         throw new ApiError(ERROR_CODES.INTERNAL, 'Bid idempotency conflict');
       }
 
-      // Return the existing bid result (noop)
+      // Return the existing bid result (noop). B3: surface the *current*
+      // auction status so the bid route can still re-publish correctly
+      // to a reconnecting client — we don't know if the prior attempt's
+      // commit made it through the socket fanout.
       return {
         bidId: existing.id,
         auctionId: input.auctionId,
         amountUSD: input.amountUSD,
         causedExtension: false,
+        causedSeal: false,
+        newStatus:
+          auction.status === 'sealed'
+            ? 'sealed'
+            : auction.status === 'extended'
+              ? 'extended'
+              : 'live',
         newEndAt: auction.endAt.toISOString(),
         newExtensions: auction.extensions,
         previousHighBidderId: null,
@@ -354,7 +438,34 @@ export async function placeBid(
         .where(eq(schema.bids.id, bid.id));
     }
 
-    // 12. Update auction denormalized state
+    // -----------------------------------------------------------------
+    // 12. B3 — sealed-bid phase trigger.
+    // After the anti-snipe extension has been applied (so `newEndAt`
+    // and `newExtensions` are final), decide if this bid should flip
+    // the auction into sealed mode. Conditions, both required:
+    //   - At least SEAL_EXTENSIONS_THRESHOLD extensions already stacked
+    //   - <= SEAL_SECONDS_LEFT on the (new) timer
+    // Once sealed, we stay sealed until settlement. The check `status
+    // !== 'sealed'` makes this idempotent across concurrent bids.
+    // -----------------------------------------------------------------
+    const secondsLeft = (newEndAt.getTime() - Date.now()) / 1000;
+    const shouldSeal =
+      auction.status !== 'sealed' &&
+      newExtensions >= PLATFORM.SEAL_EXTENSIONS_THRESHOLD &&
+      secondsLeft <= PLATFORM.SEAL_SECONDS_LEFT;
+
+    const causedSeal = shouldSeal;
+    const newStatus: 'live' | 'extended' | 'sealed' = shouldSeal
+      ? 'sealed'
+      : auction.status === 'sealed'
+        ? 'sealed'
+        : causedExtension
+          ? 'extended'
+          : auction.status === 'extended'
+            ? 'extended'
+            : 'live';
+
+    // 13. Update auction denormalized state
     await tx
       .update(schema.auctions)
       .set({
@@ -363,7 +474,7 @@ export async function placeBid(
         currentHighBidderId: userId,
         endAt: newEndAt,
         extensions: newExtensions,
-        status: causedExtension ? 'extended' : auction.status,
+        status: newStatus,
       })
       .where(eq(schema.auctions.id, input.auctionId));
 
@@ -374,6 +485,8 @@ export async function placeBid(
         userId,
         amountUSD: input.amountUSD,
         causedExtension,
+        causedSeal,
+        newStatus,
         newEndAt: newEndAt.toISOString(),
       },
       'bid placed',
@@ -384,6 +497,8 @@ export async function placeBid(
       auctionId: input.auctionId,
       amountUSD: input.amountUSD,
       causedExtension,
+      causedSeal,
+      newStatus,
       newEndAt: newEndAt.toISOString(),
       newExtensions,
       previousHighBidderId,

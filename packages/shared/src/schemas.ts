@@ -24,6 +24,8 @@ export const buyPackSchema = z.object({
   dropId: uuid,
   // idempotencyKey lets a flaky client retry without double-buying.
   idempotencyKey: z.string().min(8).max(64),
+  // B4 — optional user-controlled entropy for provably fair draws.
+  clientSeed: z.string().min(1).max(128).optional(),
   // B2 — optional client-sent unix-ms of when the drop page first rendered.
   // Used by bot-detection to flag sub-500ms page-load-to-click times.
   // Optional because native clients or curl won't send it; treat absence as

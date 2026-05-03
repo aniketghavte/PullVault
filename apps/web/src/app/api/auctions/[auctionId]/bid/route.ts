@@ -49,16 +49,24 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ auctio
 
   // AFTER commit: publish events to Redis pub/sub
   const channel = REDIS_KEYS.channel.auctionEvents(auctionId);
+  const isSealed = result.newStatus === 'sealed';
 
+  // B3 — In sealed phase we HIDE the current-high amount and bidder id
+  // from everyone. The bidder's own echo goes via the portfolio channel
+  // below, not here, so this redaction is safe: a sniper listening to
+  // the public auction room only sees bid counts + timestamps, never
+  // the number to beat.
   await publishInternal(channel, INTERNAL_EVENTS.bidAccepted, {
     auctionId,
     bidId: result.bidId,
-    bidderId: userId,
-    bidderHandle: bidderProfile?.handle ?? 'Unknown',
-    amountUSD: result.amountUSD,
+    bidderId: isSealed ? null : userId,
+    bidderHandle: isSealed ? null : (bidderProfile?.handle ?? 'Unknown'),
+    amountUSD: isSealed ? null : result.amountUSD,
     placedAt: new Date().toISOString(),
     causedExtension: result.causedExtension,
+    causedSeal: result.causedSeal,
     newEndAt: result.newEndAt,
+    status: result.newStatus,
   });
 
   if (result.causedExtension) {
@@ -66,14 +74,26 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ auctio
       auctionId,
       newEndAt: result.newEndAt,
       extensions: result.newExtensions,
-      currentHighBidUSD: result.amountUSD,
-      currentHighBidderId: userId,
+      currentHighBidUSD: isSealed ? null : result.amountUSD,
+      currentHighBidderId: isSealed ? null : userId,
+      status: result.newStatus,
     });
 
     // Schedule a new close job at the new end time
     await scheduleAuctionCloseJob({
       auctionId,
       endAt: result.newEndAt,
+    });
+  }
+
+  // One-shot sealed notification on the flip edge so the UI can
+  // immediately swap the widget without waiting for the next bid.
+  if (result.causedSeal) {
+    await publishInternal(channel, INTERNAL_EVENTS.auctionSealed, {
+      auctionId,
+      newEndAt: result.newEndAt,
+      extensions: result.newExtensions,
+      status: 'sealed' as const,
     });
   }
 

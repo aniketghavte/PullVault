@@ -46,6 +46,11 @@ export const auctionStatusEnum = pgEnum('auction_status', [
   'scheduled',
   'live',
   'extended',
+  // B3 - Sealed-bid phase. When an auction is already extended >= 3 times
+  // AND <= 60s remain, bids keep landing but the high bid is hidden from
+  // all other watchers so snipers can't see the target number. Settlement
+  // still goes through 'settling' -> 'settled'.
+  'sealed',
   'settling',
   'settled',
   'cancelled',
@@ -227,6 +232,27 @@ export const packPurchases = pgTable(
     sealed: boolean('sealed').notNull().default(true),
     openedAt: timestamp('opened_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // ------------------------------------------------------------------
+    // B4 — Provably fair commitment.
+    // ------------------------------------------------------------------
+    // serverSeed: 64-char hex (32 random bytes). Stored from purchase
+    // time but NOT surfaced in API responses until `sealed = false`.
+    // Once the pack is opened the seed is published so anyone can verify.
+    serverSeed: text('server_seed'),
+    // SHA256(serverSeed). Public from the moment the purchase commits —
+    // this is the "commitment" the user can screenshot and later prove
+    // the server never changed the seed behind the scenes.
+    serverSeedHash: text('server_seed_hash').notNull(),
+    // Client-supplied entropy (if any). Falls back to the purchase id so
+    // verification math always has a defined value. Public.
+    clientSeed: text('client_seed'),
+    // Reserved for future multi-draw extensions (re-rolls, bonus packs).
+    // Today the draw index is used directly in the HMAC message.
+    nonce: integer('nonce').notNull().default(0),
+    // Stamped the first time the verify page runs a full verification
+    // against this purchase. Read from /api/audit/packs for the "how
+    // many users actually verified" metric.
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
   },
   (t) => ({
     idemUx: uniqueIndex('pack_purchases_user_idem_ux').on(t.userId, t.idempotencyKey),
@@ -247,6 +273,11 @@ export const packPurchaseCards = pgTable(
       .references(() => cards.id),
     // Snapshot of price at draw time -> used as cost basis later.
     drawPriceUsd: numeric('draw_price_usd', { precision: 14, scale: 2 }).notNull(),
+    // B4 — ordinal of this card in the provably-fair draw sequence.
+    // Today `drawIndex === position`, but we keep the two independent
+    // because `position` is part of the PK and the verifier wants a
+    // stable, explicit "this is what you HMAC against" field.
+    drawIndex: integer('draw_index').notNull().default(0),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.purchaseId, t.position] }),
@@ -451,6 +482,45 @@ export const portfolioSnapshots = pgTable(
 );
 
 // =====================================================================
+// B3 — Flagged activity (wash-trade detector, low-price auctions, circular trades).
+// =====================================================================
+// Append-only audit table populated by the hourly BullMQ detector worker.
+// The detector dedupes itself by looking up existing rows per-type before
+// inserting, so re-running is safe. Reviewed rows stay in place (we want
+// history) and flip `reviewed=true` via PATCH from the admin panel.
+export const flaggedActivity = pgTable(
+  'flagged_activity',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Enumerated via plain text so new detector heuristics can ship without
+    // a migration. Current values:
+    //   'wash_trade'         - same two users traded same card >1x in 7d
+    //   'low_price_auction'  - auction closed < 50% market with <= 1 bidder
+    //   'circular_trade'     - A sold to B, then B sold back to A within 30d
+    type: text('type').notNull(),
+    // Primary reference — trade/listing id OR auction id depending on type.
+    // Nullable because some flags aggregate several rows (multi-row wash).
+    referenceId: uuid('reference_id'),
+    reason: text('reason').notNull(),
+    // 'low' | 'medium' | 'high' — purely for UI sorting/highlighting.
+    severity: text('severity').notNull().default('medium'),
+    // Free-form context: the user ids, amounts, trade ids, etc. that went
+    // into the flag. Used by the dashboard to show "why" without re-running.
+    metadata: jsonb('metadata'),
+    reviewed: boolean('reviewed').notNull().default(false),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedBy: text('reviewed_by'),
+    reviewNotes: text('review_notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    typeTimeIx: index('flagged_activity_type_time_ix').on(t.type, t.createdAt),
+    reviewedTimeIx: index('flagged_activity_reviewed_time_ix').on(t.reviewed, t.createdAt),
+    referenceIx: index('flagged_activity_reference_ix').on(t.referenceId),
+  }),
+);
+
+// =====================================================================
 // B2 — Anti-bot signals, scored-account flags, and rate-limit audit log.
 // =====================================================================
 // These tables are append-only (signals + events) or 1-row-per-user
@@ -547,3 +617,4 @@ export type LedgerEntry = typeof ledgerEntries.$inferSelect;
 export type BotSignal = typeof botSignals.$inferSelect;
 export type SuspiciousAccount = typeof suspiciousAccounts.$inferSelect;
 export type RateLimitEvent = typeof rateLimitEvents.$inferSelect;
+export type FlaggedActivity = typeof flaggedActivity.$inferSelect;

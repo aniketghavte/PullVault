@@ -22,6 +22,24 @@ export const PLATFORM = {
   // Hard cap so a stubborn pair can't extend forever (defensive).
   AUCTION_MAX_EXTENSIONS: 20,
 
+  // B3 - Sealed-bid phase. Once an auction has been extended this many
+  // times AND the timer shows <= SEAL_SECONDS_LEFT, the next accepted
+  // bid flips status to 'sealed' and broadcasts redact `currentHighBid`
+  // + `currentHighBidderId`. Threshold of 3 extensions matches the brief
+  // and keeps normal back-and-forth auctions fully transparent.
+  SEAL_EXTENSIONS_THRESHOLD: 3,
+  SEAL_SECONDS_LEFT: 60,
+
+  // B3 - Bid validation rules.
+  // Fat-finger cap: no bid may exceed this multiple of the card's market
+  // price. 10x lets even hype-driven overpays through while stopping
+  // "I meant $50, typed $500000" mistakes.
+  MAX_BID_MARKET_MULTIPLIER: 10,
+  // Minimum gap between consecutive bids from the same user on the same
+  // auction. Stops rapid micro-bidding / spray scripts. 5s is loose
+  // enough that a deliberate counter-bid in the final seconds is fine.
+  MIN_BID_INTERVAL_SECONDS: 5,
+
   // Pack drop UX
   DROP_PRESALE_VISIBLE_HOURS: 12,
   DROP_PURCHASE_RATE_LIMIT_PER_USER_PER_DROP: 5,

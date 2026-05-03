@@ -39,10 +39,18 @@ export function registerAuctionHandlers(io: AppSocketServer, socket: Socket) {
         .limit(1);
 
       if (auction) {
+        // B3 — mirror the web API redaction: a socket joining a sealed
+        // auction sees the status + timer + extension count but NOT the
+        // current high bid or bidder. Keeps sniper scripts blind even
+        // if they reconnect mid-sealed-phase.
+        const isSealed = auction.status === 'sealed';
         socket.emit('auction:state', {
           auctionId,
-          currentHighBidUSD: auction.currentHighBidUsd ? toMoneyString(auction.currentHighBidUsd) : null,
-          currentHighBidderId: auction.currentHighBidderId,
+          currentHighBidUSD:
+            isSealed || !auction.currentHighBidUsd
+              ? null
+              : toMoneyString(auction.currentHighBidUsd),
+          currentHighBidderId: isSealed ? null : auction.currentHighBidderId,
           newEndAt: auction.endAt.toISOString(),
           extensions: auction.extensions,
           status: auction.status,

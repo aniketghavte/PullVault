@@ -15,6 +15,7 @@ export interface PurchaseJobData {
   userId: string;
   dropId: string;
   idempotencyKey: string;
+  clientSeed?: string;
   /** Unix-ms when the web route enqueued this job (used for metrics). */
   requestedAt: number;
   /** Captured IP — surfaced back to bot-detection if we record a sold-out signal. */

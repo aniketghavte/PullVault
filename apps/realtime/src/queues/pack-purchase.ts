@@ -69,6 +69,7 @@ export function startPackPurchaseWorker() {
             userId: job.data.userId,
             dropId: job.data.dropId,
             idempotencyKey: job.data.idempotencyKey,
+            clientSeed: job.data.clientSeed,
           }),
         });
       } catch (err) {

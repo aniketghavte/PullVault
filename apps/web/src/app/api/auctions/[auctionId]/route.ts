@@ -60,6 +60,13 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ auctio
     .orderBy(desc(schema.bids.placedAt))
     .limit(20);
 
+  // B3 — In sealed phase we do NOT reveal the current high bid or who
+  // placed it. The bid *count* + timestamps are still public because
+  // they're discoverable from socket room size and do not give snipers
+  // the number to beat. We also redact the most recent bid amounts in
+  // `recentBids` for the same reason.
+  const isSealed = row.status === 'sealed';
+
   return {
     auction: {
       auctionId: row.auctionId,
@@ -67,9 +74,13 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ auctio
       sellerId: row.sellerId,
       sellerHandle: row.sellerHandle,
       startingBidUSD: toMoneyString(row.startingBidUsd),
-      currentHighBidId: row.currentHighBidId,
-      currentHighBidUSD: row.currentHighBidUsd ? toMoneyString(row.currentHighBidUsd) : null,
-      currentHighBidderId: row.currentHighBidderId,
+      currentHighBidId: isSealed ? null : row.currentHighBidId,
+      currentHighBidUSD: isSealed
+        ? null
+        : row.currentHighBidUsd
+          ? toMoneyString(row.currentHighBidUsd)
+          : null,
+      currentHighBidderId: isSealed ? null : row.currentHighBidderId,
       startAt: row.startAt.toISOString(),
       endAt: row.endAt.toISOString(),
       extensions: row.extensions,
@@ -84,9 +95,9 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ auctio
     recentBids: bidsRows.map((b) => ({
       bidId: b.bidId,
       auctionId,
-      bidderId: b.bidderId,
-      bidderHandle: b.bidderHandle,
-      amountUSD: toMoneyString(b.amountUsd),
+      bidderId: isSealed ? null : b.bidderId,
+      bidderHandle: isSealed ? null : b.bidderHandle,
+      amountUSD: isSealed ? null : toMoneyString(b.amountUsd),
       placedAt: b.placedAt.toISOString(),
       causedExtension: b.causedExtension,
     })),

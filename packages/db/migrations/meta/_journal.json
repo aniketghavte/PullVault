@@ -22,6 +22,20 @@
       "when": 1777630319067,
       "tag": "0002_flowery_darkhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777633985509,
+      "tag": "0003_easy_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777636895306,
+      "tag": "0004_lumpy_terrax",
+      "breakpoints": true
     }
   ]
 }

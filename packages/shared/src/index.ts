@@ -8,3 +8,4 @@ export * from './redis';
 export * from './pack-economics';
 export * from './rate-limiter';
 export * from './purchase-queue';
+export * from './provably-fair';

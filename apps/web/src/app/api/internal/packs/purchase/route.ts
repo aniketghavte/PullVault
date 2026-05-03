@@ -26,6 +26,7 @@ const bodySchema = z.object({
   userId: z.string().uuid(),
   dropId: z.string().uuid(),
   idempotencyKey: z.string().min(8).max(64),
+  clientSeed: z.string().min(1).max(128).optional(),
 });
 
 export const POST = handler(async (req: Request) => {
@@ -47,10 +48,10 @@ export const POST = handler(async (req: Request) => {
     );
   }
 
-  const { userId, dropId, idempotencyKey } = parsed.data;
+  const { userId, dropId, idempotencyKey, clientSeed } = parsed.data;
 
   // ---- 3. Atomic purchase (the service throws ApiError on SOLD_OUT / INSUFFICIENT_FUNDS) ----
-  const result = await purchasePack(db, userId, { dropId, idempotencyKey });
+  const result = await purchasePack(db, userId, { dropId, idempotencyKey, clientSeed });
 
   // ---- 4. Publish Redis events (post-commit, same as pre-B2 behaviour) ----
   try {
