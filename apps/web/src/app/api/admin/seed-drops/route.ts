@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 // POST /api/admin/seed-drops — seeds pack_tiers + pack_drops for testing.
 // Creates one drop per tier, all going live in 30 seconds from now.
 export const POST = handler(async () => {
-  // 1. Upsert pack_tiers
+  // 1. Upsert pack_tiers (including price/weights so local demos can resync).
   for (const tier of PACK_TIERS) {
     const [existing] = await db
       .select({ id: schema.packTiers.id })
@@ -23,7 +23,19 @@ export const POST = handler(async () => {
         rarityWeights: tier.rarityWeights,
         active: true,
       });
+      continue;
     }
+
+    await db
+      .update(schema.packTiers)
+      .set({
+        name: tier.name,
+        priceUsd: tier.priceUSD,
+        cardsPerPack: tier.cardsPerPack,
+        rarityWeights: tier.rarityWeights,
+        active: true,
+      })
+      .where(eq(schema.packTiers.id, existing.id));
   }
 
   // 2. Create one drop per tier, going live in 30 seconds

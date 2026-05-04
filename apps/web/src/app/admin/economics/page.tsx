@@ -112,9 +112,8 @@ export default function AdminEconomicsPage() {
             Platform economics
           </h1>
           <p className="text-bodyLarge text-ink/70">
-            Expected value per tier + fee revenue computed from real ledger data, plus a live
-            Monte-Carlo simulator and weight solver (see{' '}
-            <span className="font-mono">B1 - Pack Economics Algorithm</span>).
+            Platform-level economics and integrity health. For B1 weight simulation/solver workflows,
+            use the dedicated <span className="font-mono">Open B1 Demo Lab -&gt;</span>.
           </p>
         </div>
 
@@ -136,6 +135,9 @@ export default function AdminEconomicsPage() {
                 </div>
               </div>
               <div className="flex gap-3">
+                <Link href="/admin/economics/b1-lab">
+                  <ButtonPillOutline>Open B1 Demo Lab -&gt;</ButtonPillOutline>
+                </Link>
                 <Link href="/admin/catalog">
                   <ButtonPrimary>Refresh catalog</ButtonPrimary>
                 </Link>
@@ -194,9 +196,6 @@ export default function AdminEconomicsPage() {
           </ResearchTable>
         </div>
 
-        <SimulatorPanel />
-        <SolverPanel />
-        <RebalanceLogPanel />
         <PlatformHealthB5 />
         <AuctionHealthPanel />
       </div>
@@ -866,16 +865,22 @@ function AuctionHealthPanel() {
     let cancelled = false;
     setErr(null);
     Promise.all([
-      fetch('/api/admin/auction-analytics', { cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/admin/auction-analytics', { cache: 'no-store', credentials: 'include' }).then((r) =>
+        r.json(),
+      ),
       fetch('/api/admin/flagged-activity?reviewed=false&limit=50', {
         cache: 'no-store',
+        credentials: 'include',
       }).then((r) => r.json()),
     ])
       .then(([a, f]) => {
         if (cancelled) return;
         if (a.ok) setAnalytics(a.data as AuctionAnalytics);
-        else setErr(a.error?.message ?? 'Failed to load auction analytics');
         if (f.ok) setFlags((f.data.flags ?? []) as FlaggedActivityRow[]);
+        const parts: string[] = [];
+        if (!a.ok) parts.push(a.error?.message ?? 'Failed to load auction analytics');
+        if (!f.ok) parts.push(f.error?.message ?? 'Failed to load flagged activity');
+        if (parts.length) setErr(parts.join(' · '));
       })
       .catch(() => {
         if (!cancelled) setErr('Failed to load auction analytics');
@@ -891,6 +896,7 @@ function AuctionHealthPanel() {
       try {
         const res = await fetch('/api/admin/flagged-activity', {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id }),
         });
@@ -1073,3 +1079,7 @@ function MetricCard({
     </div>
   );
 }
+
+
+
+

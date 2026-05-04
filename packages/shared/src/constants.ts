@@ -87,8 +87,8 @@ export const PACK_ECONOMICS = {
   // "Emergency" band outside which the BullMQ rebalancer will auto-apply
   // solved weights after a price refresh. Margins between the band are
   // considered healthy drift and are left alone.
-  EMERGENCY_MARGIN_FLOOR: 0.05,
-  EMERGENCY_MARGIN_CEILING: 0.45,
+  EMERGENCY_MARGIN_FLOOR: 0.08,
+  EMERGENCY_MARGIN_CEILING: 0.25,
 } as const;
 
 // Pack tier definitions. Numbers are JUSTIFIED in architecture.md.
@@ -98,7 +98,7 @@ export const PACK_TIERS = [
   {
     code: 'standard',
     name: 'Standard Booster',
-    priceUSD: '4.99',
+    priceUSD: '41.99',
     cardsPerPack: 5,
     rarityWeights: {
       common: 0.7,
@@ -111,7 +111,7 @@ export const PACK_TIERS = [
   {
     code: 'premium',
     name: 'Premium Booster',
-    priceUSD: '14.99',
+    priceUSD: '87.99',
     cardsPerPack: 7,
     rarityWeights: {
       common: 0.5,
@@ -124,7 +124,7 @@ export const PACK_TIERS = [
   {
     code: 'elite',
     name: 'Elite Vault',
-    priceUSD: '49.99',
+    priceUSD: '220.00',
     cardsPerPack: 10,
     rarityWeights: {
       common: 0.3,
@@ -137,7 +137,7 @@ export const PACK_TIERS = [
   {
     code: 'whale',
     name: 'Whale Crate',
-    priceUSD: '199.99',
+    priceUSD: '399.99',
     cardsPerPack: 15,
     rarityWeights: {
       common: 0.15,

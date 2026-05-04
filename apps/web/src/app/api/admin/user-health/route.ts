@@ -10,9 +10,9 @@ export const GET = handler(async () => {
   await requireUser();
 
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgoIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const fourteenDaysAgoIso = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
   const dropEngagement = (await db.execute(sql`
     SELECT
@@ -30,7 +30,7 @@ export const GET = handler(async () => {
     FROM ${schema.packDrops} pd
     JOIN ${schema.packTiers} pt ON pt.id = pd.tier_id
     LEFT JOIN ${schema.packPurchases} pp ON pp.drop_id = pd.id
-    WHERE pd.scheduled_at >= ${sevenDaysAgo}
+    WHERE pd.scheduled_at >= ${sevenDaysAgoIso}
     GROUP BY pd.id, pt.name, pd.scheduled_at, pd.total_inventory, pd.remaining_inventory
     ORDER BY pd.scheduled_at DESC
     LIMIT 20
@@ -48,7 +48,7 @@ export const GET = handler(async () => {
       FROM ${schema.bids}
       GROUP BY auction_id
     ) bid_counts ON bid_counts.auction_id = a.id
-    WHERE a.created_at >= ${thirtyDaysAgo}
+    WHERE a.created_at >= ${thirtyDaysAgoIso}
       AND a.status = 'settled'
   `)) as unknown as Record<string, unknown>[];
 
@@ -64,13 +64,13 @@ export const GET = handler(async () => {
     FROM (
       SELECT DISTINCT user_id
       FROM ${schema.packPurchases}
-      WHERE created_at >= ${fourteenDaysAgo}
-        AND created_at < ${sevenDaysAgo}
+      WHERE created_at >= ${fourteenDaysAgoIso}
+        AND created_at < ${sevenDaysAgoIso}
     ) cohort
     LEFT JOIN (
       SELECT DISTINCT user_id
       FROM ${schema.packPurchases}
-      WHERE created_at >= ${sevenDaysAgo}
+      WHERE created_at >= ${sevenDaysAgoIso}
     ) returned ON returned.user_id = cohort.user_id
   `)) as unknown as Record<string, unknown>[];
 
@@ -80,17 +80,17 @@ export const GET = handler(async () => {
       COUNT(DISTINCT pp.user_id) FILTER (
         WHERE pp.user_id NOT IN (
           SELECT DISTINCT user_id FROM ${schema.packPurchases}
-          WHERE created_at < ${sevenDaysAgo}
+          WHERE created_at < ${sevenDaysAgoIso}
         )
       )::text AS new_buyers,
       COUNT(DISTINCT pp.user_id) FILTER (
         WHERE pp.user_id IN (
           SELECT DISTINCT user_id FROM ${schema.packPurchases}
-          WHERE created_at < ${sevenDaysAgo}
+          WHERE created_at < ${sevenDaysAgoIso}
         )
       )::text AS returning_buyers
     FROM ${schema.packPurchases} pp
-    WHERE pp.created_at >= ${sevenDaysAgo}
+    WHERE pp.created_at >= ${sevenDaysAgoIso}
   `)) as unknown as Record<string, unknown>[];
 
   const portfolioStats = (await db.execute(sql`

@@ -63,6 +63,7 @@ export default function DropsPage() {
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef(false);
+  const pageLoadMsRef = useRef(Date.now());
 
   // Fetch drops from real API
   const fetchDrops = useCallback(async () => {
@@ -131,25 +132,65 @@ export default function DropsPage() {
     }
   }, [drops.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Buy handler — calls real API
+  // Buy handler — B2 purchase is async (BullMQ + poll); same flow as /drops/[dropId].
   const buy = async (drop: DropState) => {
     setBusyDropId(drop.dropId);
     setError(null);
+    const fetchOpts = { cache: 'no-store' as const, credentials: 'include' as const };
     try {
       const idempotencyKey = crypto.randomUUID();
       const res = await fetch(`/api/drops/${drop.dropId}/purchase`, {
         method: 'POST',
+        ...fetchOpts,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idempotencyKey }),
+        body: JSON.stringify({ idempotencyKey, pageLoadTimestamp: pageLoadMsRef.current }),
       });
       const json = await res.json();
-      if (json.ok) {
-        router.push(`/packs/${json.data.purchaseId}/reveal`);
-      } else {
-        const msg = json.error?.message ?? 'Purchase failed';
-        setError(msg);
-        // Refresh drops to get current state
+      if (!json.ok) {
+        setError(json.error?.message ?? 'Purchase failed');
         fetchDrops();
+        return;
+      }
+      const { jobId, timeoutMs } = json.data as { jobId: string; timeoutMs: number };
+      if (!jobId) {
+        setError('Invalid purchase response');
+        fetchDrops();
+        return;
+      }
+      const deadline = Date.now() + (timeoutMs ?? 30_000);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (Date.now() > deadline) {
+          setError('Purchase is taking longer than expected — please try again.');
+          fetchDrops();
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 500));
+        const poll = await fetch(`/api/drops/purchase-status/${jobId}`, fetchOpts);
+        const pj = await poll.json();
+        if (!pj.ok) {
+          setError(pj.error?.message ?? 'Purchase lookup failed');
+          fetchDrops();
+          return;
+        }
+        const data = pj.data as
+          | { status: 'queued' }
+          | { status: 'completed'; result: { success: boolean; purchaseId?: string; errorMessage?: string } }
+          | { status: 'failed'; errorMessage?: string };
+        if (data.status === 'completed') {
+          if (data.result.success && data.result.purchaseId) {
+            router.push(`/packs/${data.result.purchaseId}/reveal`);
+            return;
+          }
+          setError(data.result.errorMessage ?? 'Purchase failed');
+          fetchDrops();
+          return;
+        }
+        if (data.status === 'failed') {
+          setError(data.errorMessage ?? 'Purchase failed');
+          fetchDrops();
+          return;
+        }
       }
     } catch {
       setError('Network error — please try again.');

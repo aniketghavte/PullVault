@@ -78,10 +78,20 @@ export async function GET(req: Request) {
   }));
 
   const chiSquaredResult = computeChiSquared(distribution);
-  const verifiedCountRows = await db
-    .select({ count: sql<number>`COUNT(*)::int` })
-    .from(schema.packPurchases)
-    .where(sql`${schema.packPurchases.verifiedAt} IS NOT NULL`);
+
+  let verificationPageUses = 0;
+  try {
+    const verifiedCountRows = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(schema.packPurchases)
+      .where(sql`${schema.packPurchases.verifiedAt} IS NOT NULL`);
+    verificationPageUses = Number(verifiedCountRows[0]?.count ?? 0);
+  } catch (err: unknown) {
+    // DB missing B4 migration column `verified_at` (Postgres 42703) — rest of audit still works.
+    const code =
+      err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : '';
+    if (code !== '42703') throw err;
+  }
 
   const critical = 9.488; // df=4, alpha=0.05
   const fair = chiSquaredResult.df === 4 ? chiSquaredResult.statistic < critical : chiSquaredResult.pValue > 0.05;
@@ -97,7 +107,7 @@ export async function GET(req: Request) {
       interpretation: fair
         ? 'Distribution is consistent with advertised weights (p > 0.05).'
         : 'Distribution deviates significantly from advertised weights (p < 0.05).',
-      verificationPageUses: Number(verifiedCountRows[0]?.count ?? 0),
+      verificationPageUses,
     },
   });
 }

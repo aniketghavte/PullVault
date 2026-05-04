@@ -14,9 +14,9 @@ export const GET = handler(async () => {
   await requireUser();
 
   const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const oneDayAgoIso = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const sevenDaysAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgoIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const actualMargins = (await db.execute(sql`
     SELECT
@@ -39,7 +39,7 @@ export const GET = handler(async () => {
       JOIN ${schema.cards} c ON c.id = ppc.card_id
       GROUP BY ppc.purchase_id
     ) card_totals ON card_totals.purchase_id = pp.id
-    WHERE pp.created_at >= ${oneDayAgo}
+    WHERE pp.created_at >= ${oneDayAgoIso}
     GROUP BY pt.code, pt.name, pt.price_usd, pt.rebalanced_at, pt.rebalanced_reason
     ORDER BY pt.price_usd ASC
   `)) as unknown as Array<Record<string, unknown>>;
@@ -51,7 +51,7 @@ export const GET = handler(async () => {
       COUNT(*)::text AS transaction_count
     FROM ${schema.ledgerEntries}
     WHERE user_id IS NULL
-      AND created_at >= ${thirtyDaysAgo}
+      AND created_at >= ${thirtyDaysAgoIso}
       AND amount_usd > 0
     GROUP BY kind
     ORDER BY SUM(amount_usd) DESC
@@ -64,7 +64,7 @@ export const GET = handler(async () => {
     FROM ${schema.ledgerEntries}
     WHERE user_id IS NULL
       AND amount_usd > 0
-      AND created_at >= ${sevenDaysAgo}
+      AND created_at >= ${sevenDaysAgoIso}
     GROUP BY DATE_TRUNC('day', created_at)
     ORDER BY day ASC
   `)) as unknown as { revenue: string }[];

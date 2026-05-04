@@ -99,11 +99,12 @@ export function PlatformHealthB5() {
     setLoading(true);
     setErr(null);
     try {
+      const fetchOpts = { cache: 'no-store' as const, credentials: 'include' as const };
       const [fraudRes, healthRes, auditRes, userHealthRes] = await Promise.all([
-        fetch('/api/admin/fraud-metrics', { cache: 'no-store' }),
-        fetch('/api/admin/economic-health', { cache: 'no-store' }),
-        fetch('/api/audit/packs', { cache: 'no-store' }),
-        fetch('/api/admin/user-health', { cache: 'no-store' }),
+        fetch('/api/admin/fraud-metrics', fetchOpts),
+        fetch('/api/admin/economic-health', fetchOpts),
+        fetch('/api/audit/packs', fetchOpts),
+        fetch('/api/admin/user-health', fetchOpts),
       ]);
 
       if (!fraudRes.ok || !healthRes.ok || !auditRes.ok || !userHealthRes.ok) {

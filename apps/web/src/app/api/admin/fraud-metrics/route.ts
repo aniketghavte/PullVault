@@ -10,8 +10,8 @@ export const GET = handler(async () => {
   await requireUser();
 
   const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const oneDayAgoIso = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const sevenDaysAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const rateLimitHits = (await db.execute(sql`
     SELECT
@@ -19,7 +19,7 @@ export const GET = handler(async () => {
       limit_type,
       COUNT(*)::text AS hit_count
     FROM ${schema.rateLimitEvents}
-    WHERE created_at >= ${oneDayAgo}
+    WHERE created_at >= ${oneDayAgoIso}
     GROUP BY endpoint, limit_type
     ORDER BY COUNT(*) DESC
   `)) as unknown as Record<string, unknown>[];
@@ -29,7 +29,7 @@ export const GET = handler(async () => {
       DATE_TRUNC('hour', created_at) AS hour,
       COUNT(*)::text AS hit_count
     FROM ${schema.rateLimitEvents}
-    WHERE created_at >= ${oneDayAgo}
+    WHERE created_at >= ${oneDayAgoIso}
     GROUP BY DATE_TRUNC('hour', created_at)
     ORDER BY hour ASC
   `)) as unknown as Record<string, unknown>[];
@@ -40,7 +40,7 @@ export const GET = handler(async () => {
       COUNT(*)::text AS signal_count,
       COUNT(DISTINCT user_id)::text AS unique_users
     FROM ${schema.botSignals}
-    WHERE created_at >= ${sevenDaysAgo}
+    WHERE created_at >= ${sevenDaysAgoIso}
     GROUP BY signal_type
     ORDER BY COUNT(*) DESC
   `)) as unknown as Record<string, unknown>[];

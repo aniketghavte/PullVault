@@ -35,6 +35,9 @@ export function SiteFooter() {
 
           <div className="space-y-4">
             <div className="text-micro font-semibold text-canvas/90">Project</div>
+            <p className="text-micro leading-snug text-canvas/50">
+              Navigate how the platform works — stack, data flows, and B1–B5 guides.
+            </p>
             <div className="flex flex-col gap-2 text-body">
               <a
                 href="https://github.com/aniketghavte/PullVault/"
@@ -48,7 +51,7 @@ export function SiteFooter() {
                 href="/architecture"
                 className="text-canvas/80 hover:text-canvas underline underline-offset-4 decoration-canvas/20"
               >
-                Architecture
+                Platform architecture
               </Link>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { count, eq, sql } from 'drizzle-orm';
 
 import { handler } from '@/lib/api';
+import { requireUser } from '@/lib/auth';
 import { db, schema } from '@/lib/db';
 import { PLATFORM } from '@pullvault/shared/constants';
 
@@ -31,8 +32,11 @@ type MetricsRow = {
 };
 
 export const GET = handler(async () => {
+  await requireUser();
+
   const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const thirtyDaysAgo = new Date(thirtyDaysAgoMs);
+  // postgres.js cannot bind JS Date in raw sql fragments — use ISO string for timestamptz.
+  const thirtyDaysAgoIso = new Date(thirtyDaysAgoMs).toISOString();
   const sealThreshold = PLATFORM.SEAL_EXTENSIONS_THRESHOLD;
 
   const metricsRows = (await db.execute<MetricsRow>(sql`
@@ -67,7 +71,7 @@ export const GET = handler(async () => {
     LEFT JOIN bidder_counts bc  ON bc.auction_id = a.id
     LEFT JOIN flagged_auctions fa ON fa.reference_id = a.id
     WHERE a.status = 'settled'
-      AND a.settled_at >= ${thirtyDaysAgo}
+      AND a.settled_at >= ${thirtyDaysAgoIso}
   `)) as unknown as MetricsRow[];
 
   const m = metricsRows[0];
