@@ -1,8 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { hashSeed, verifyPurchase, type VerificationResult } from '@pullvault/shared';
+import { verifyPurchase, type VerificationResult } from '@pullvault/shared/provably-fair';
 
 interface PurchaseData {
   id: string;
@@ -25,10 +24,9 @@ export default function VerifyPurchasePage({ params }: { params: Promise<{ purch
   const { purchaseId } = use(params);
   const [purchase, setPurchase] = useState<PurchaseData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [manualSeed, setManualSeed] = useState('');
+  const [testSeed, setTestSeed] = useState('');
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [seedHashPreview, setSeedHashPreview] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,13 +46,6 @@ export default function VerifyPurchasePage({ params }: { params: Promise<{ purch
     };
   }, [purchaseId]);
 
-  const verdict = useMemo(() => {
-    if (!result) return null;
-    return result.hashValid && result.allMatched
-      ? 'VERIFIED - draw commitment and rarity rolls match'
-      : 'VERIFICATION FAILED - commitment or draw mismatch detected';
-  }, [result]);
-
   const runVerification = async (seedToUse: string) => {
     if (!purchase || !seedToUse) return;
     setRunning(true);
@@ -72,8 +63,6 @@ export default function VerifyPurchasePage({ params }: { params: Promise<{ purch
         })),
       });
       setResult(verification);
-      setSeedHashPreview(await hashSeed(seedToUse));
-      void fetch(`/api/packs/${purchase.id}/verify-data`, { method: 'POST' });
     } finally {
       setRunning(false);
     }
@@ -89,66 +78,102 @@ export default function VerifyPurchasePage({ params }: { params: Promise<{ purch
   if (loading) return <section className="px-4 py-10">Loading verification data...</section>;
   if (!purchase) return <section className="px-4 py-10">Purchase not found.</section>;
 
+  const fullyVerified = !!result && result.hashValid && result.allMatched;
+
   return (
     <section className="px-4 pt-10 pb-16">
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="space-y-2">
           <h1 className="font-display text-sectionDisplay tracking-tight">Provably fair verification</h1>
-          <p className="text-bodyLarge text-ink/70">Purchase ID: <code>{purchase.id}</code></p>
+          <p className="text-bodyLarge text-ink/70">
+            Purchase ID: <code>{purchase.id}</code>
+          </p>
         </div>
 
+        {/* SECTION 1 — Commitment */}
         <div className="rounded-lg border border-cardBorder bg-canvas p-5 space-y-3">
-          <div><strong>Server commitment hash:</strong> <code>{purchase.serverSeedHash}</code></div>
-          <div><strong>Client seed:</strong> <code>{purchase.clientSeed}</code></div>
+          <h2 className="font-display text-featureHeading">SECTION 1 — Commitment</h2>
           <div>
-            <strong>Server seed:</strong>{' '}
-            {purchase.serverSeed ? <code>{purchase.serverSeed}</code> : 'Not revealed yet. Open the pack first.'}
+            <div className="text-sm font-semibold">Server Seed Hash (shown at purchase)</div>
+            <pre className="mt-1 rounded border border-cardBorder bg-stone/60 px-3 py-2 font-mono text-xs overflow-x-auto">
+              {purchase.serverSeedHash}
+            </pre>
           </div>
-          <div className="text-micro text-mutedSlate">
-            Verify with the revealed seed for a pass, or try any custom seed to see tamper detection fail.
+          <div>
+            <div className="text-sm font-semibold">Server Seed (revealed after opening)</div>
+            <pre className="mt-1 rounded border border-cardBorder bg-stone/60 px-3 py-2 font-mono text-xs overflow-x-auto">
+              {purchase.serverSeed ?? 'Not yet revealed — open the pack first'}
+            </pre>
+          </div>
+          <div>
+            <div className="text-sm font-semibold">Client Seed</div>
+            <pre className="mt-1 rounded border border-cardBorder bg-stone/60 px-3 py-2 font-mono text-xs overflow-x-auto">
+              {purchase.clientSeed}
+            </pre>
           </div>
         </div>
 
+        {/* SECTION 2 — Tamper Test */}
         <div className="rounded-lg border border-cardBorder bg-canvas p-5 space-y-3">
-          <label htmlFor="manualSeed" className="block text-sm font-semibold">Manual seed test</label>
+          <h2 className="font-display text-featureHeading">SECTION 2 — Tamper Test</h2>
+          <label htmlFor="testSeed" className="block text-sm font-semibold">
+            Enter any seed to test...
+          </label>
           <input
-            id="manualSeed"
+            id="testSeed"
             className="w-full rounded border border-cardBorder px-3 py-2"
-            placeholder="Paste or type a seed..."
-            value={manualSeed}
-            onChange={(e) => setManualSeed(e.target.value)}
+            placeholder="Enter any seed to test..."
+            value={testSeed}
+            onChange={(e) => setTestSeed(e.target.value)}
           />
           <button
             type="button"
             className="rounded bg-ink px-4 py-2 text-white disabled:opacity-60"
-            disabled={running || manualSeed.trim().length === 0}
-            onClick={() => void runVerification(manualSeed.trim())}
+            disabled={running || testSeed.trim().length === 0}
+            onClick={() => void runVerification(testSeed.trim())}
           >
             {running ? 'Verifying...' : 'Verify with this seed'}
           </button>
-          {seedHashPreview && (
-            <div className="text-micro">
-              SHA256(manual seed): <code>{seedHashPreview}</code>
-            </div>
-          )}
         </div>
 
-        {result && (
+        {/* SECTION 3 — Result */}
+        {result ? (
           <div className="rounded-lg border border-cardBorder bg-canvas p-5 space-y-4">
-            <div className={result.hashValid && result.allMatched ? 'text-deepEnterpriseGreen' : 'text-errorRed'}>
-              <strong>{verdict}</strong>
+            <h2 className="font-display text-featureHeading">SECTION 3 — Result</h2>
+            <div
+              className={
+                fullyVerified
+                  ? 'rounded border border-deepEnterpriseGreen/35 bg-deepEnterpriseGreen/10 px-4 py-3 text-deepEnterpriseGreen'
+                  : 'rounded border border-errorRed/35 bg-errorRed/10 px-4 py-3 text-errorRed'
+              }
+            >
+              <strong>
+                {fullyVerified
+                  ? '✅ VERIFIED — This pack was drawn fairly'
+                  : '❌ VERIFICATION FAILED'}
+              </strong>
             </div>
-            <div>Hash check: {result.hashValid ? 'PASS' : 'FAIL'}</div>
-            <div>Card-by-card match: {result.allMatched ? 'PASS' : 'FAIL'}</div>
+            <div>
+              Hash check:{' '}
+              {result.hashValid
+                ? '✅ SHA256(seed) matches commitment'
+                : '❌ SHA256(seed) does not match commitment'}
+            </div>
+            <div>
+              Card draws:{' '}
+              {result.allMatched
+                ? `✅ All ${result.cards.length} cards match recomputed draws`
+                : '❌ One or more cards do not match recomputed draws'}
+            </div>
 
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="py-2 pr-4">Draw</th>
+                    <th className="py-2 pr-4">Draw #</th>
                     <th className="py-2 pr-4">Float</th>
-                    <th className="py-2 pr-4">Expected rarity</th>
-                    <th className="py-2 pr-4">Actual card</th>
+                    <th className="py-2 pr-4">Rarity Drawn</th>
+                    <th className="py-2 pr-4">Card Name</th>
                     <th className="py-2 pr-4">Match</th>
                   </tr>
                 </thead>
@@ -159,18 +184,14 @@ export default function VerifyPurchasePage({ params }: { params: Promise<{ purch
                       <td className="py-2 pr-4">{row.float.toFixed(6)}</td>
                       <td className="py-2 pr-4">{row.rarity}</td>
                       <td className="py-2 pr-4">{purchase.cards[row.drawIndex]?.card?.name ?? 'Unknown card'}</td>
-                      <td className="py-2 pr-4">{row.matched ? 'PASS' : 'FAIL'}</td>
+                      <td className="py-2 pr-4">{row.matched ? '✅' : '❌'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
-
-        <Link className="inline-block text-sm underline" href={`/packs/${purchase.id}/reveal`}>
-          Back to reveal page
-        </Link>
+        ) : null}
       </div>
     </section>
   );
