@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { DocArticle, DocCallout } from '@/components/architecture/DocArticle';
+import { MermaidDiagram } from '@/components/architecture/MermaidDiagram';
 
 export const metadata: Metadata = {
   title: 'B2 · Anti-bot & rate limiting',
@@ -73,6 +74,37 @@ export default function ArchitectureB2Page() {
           <li>Worker wakes after jitter → internal web route → single Postgres txn (inventory, balance, cards, ledger).</li>
           <li>Response path: job result → client poll → UI continues to reveal flow.</li>
         </ol>
+      </section>
+
+      <section>
+        <h2>Sequence diagram</h2>
+        <MermaidDiagram chart={`sequenceDiagram
+  autonumber
+  participant U as Browser
+  participant Web as Web API (purchase route)
+  participant RL as Redis Lua limiter
+  participant Q as BullMQ (pack-purchase queue)
+  participant W as Realtime worker
+  participant Int as Internal purchase API
+  participant DB as Postgres txn
+
+  U->>Web: POST /api/drops/[dropId]/purchase (idempotencyKey, clientSeed?)
+  Web->>RL: atomic sliding-window check
+  alt Rate limit exceeded
+    RL-->>Web: blocked
+    Web-->>U: 429 + Retry-After + rate headers
+  else Allowed
+    Web->>Q: enqueue purchase job with fairness jitter
+    Web-->>U: 202 + jobId
+    U->>Web: poll /api/drops/purchase-status/[jobId]
+    Q->>W: deliver job after delay
+    W->>Int: POST /api/internal/packs/purchase (x-realtime-token)
+    Int->>DB: single atomic purchase transaction
+    DB-->>Int: success/failure
+    Int-->>W: job result
+    W-->>Q: complete job
+    Web-->>U: status endpoint returns final outcome
+  end`} />
       </section>
 
       <section>

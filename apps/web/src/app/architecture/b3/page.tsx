@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { DocArticle, DocCallout } from '@/components/architecture/DocArticle';
+import { MermaidDiagram } from '@/components/architecture/MermaidDiagram';
 
 export const metadata: Metadata = {
   title: 'B3 · Auction integrity',
@@ -75,6 +76,40 @@ export default function ArchitectureB3Page() {
           rate, sealed usage). The economics page surfaces this beside ledger-driven economics and B5 health
           panels.
         </p>
+      </section>
+
+      <section>
+        <h2>Sequence diagram</h2>
+        <MermaidDiagram chart={`sequenceDiagram
+  autonumber
+  participant Bidder as Bidder UI
+  participant API as Auction bid API
+  participant DB as Postgres txn (FOR UPDATE)
+  participant Redis as Redis pub/sub
+  participant RT as Realtime socket server
+  participant Viewers as Watching clients
+  participant WQ as Wash-trade queue
+  participant WD as Wash-trade detector
+  participant Admin as Admin API/UI
+
+  Bidder->>API: POST /api/auctions/[auctionId]/bid
+  API->>DB: lock auction row + validate + hold balance + insert bid
+  alt Rejected (self-bid, max cap, too frequent)
+    DB-->>API: rollback
+    API-->>Bidder: 4xx validation error
+  else Accepted
+    DB-->>API: commit
+    API->>Redis: publish auction event after commit
+    Redis->>RT: event envelope
+    RT-->>Viewers: socket broadcast (sealed-safe payload if needed)
+  end
+
+  WQ->>WD: hourly detection run
+  WD->>DB: analyze listing/auction patterns
+  WD->>DB: upsert flagged_activity (deduped)
+  Admin->>API: GET /api/admin/auction-analytics + /flagged-activity
+  API->>DB: aggregate metrics and pending flags
+  API-->>Admin: health KPIs + review queue`} />
       </section>
 
       <section>

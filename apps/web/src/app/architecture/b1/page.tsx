@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { DocArticle, DocCallout } from '@/components/architecture/DocArticle';
+import { MermaidDiagram } from '@/components/architecture/MermaidDiagram';
 
 export const metadata: Metadata = {
   title: 'B1 · Pack economics',
@@ -56,6 +57,33 @@ export default function ArchitectureB1Page() {
             weights (per-row sealed contents in <code>pack_purchase_cards</code>).
           </li>
         </ol>
+      </section>
+
+      <section>
+        <h2>Sequence diagram</h2>
+        <MermaidDiagram chart={`sequenceDiagram
+  autonumber
+  participant Admin as Admin UI (/admin/economics/b1-lab)
+  participant Web as Next.js Admin API
+  participant Svc as pack-economics service
+  participant DB as Postgres (cards, pack_tiers)
+  participant Worker as Price-refresh worker
+
+  Admin->>Web: POST /api/admin/simulate-packs or /solve-weights
+  Web->>Svc: runPackSimulation / runWeightSolver
+  Svc->>DB: load prices + active tiers
+  DB-->>Svc: rarity samples + tier config
+  Svc-->>Web: EV, win-rate, warnings, recommended weights
+  Web-->>Admin: Render simulation/solver panels
+
+  Admin->>Web: POST /api/admin/catalog/refresh (hot/full)
+  Web->>Worker: enqueue BullMQ price-refresh
+  Worker->>DB: update card prices
+  Worker->>Worker: rebalanceWeightsIfNeeded()
+  Worker->>DB: update pack_tiers if margin outside emergency band
+  Admin->>Web: GET /api/admin/rebalance-log
+  Web->>DB: read rebalanced_at + previous_weights snapshot
+  DB-->>Admin: before/after margin + weights`} />
       </section>
 
       <section>

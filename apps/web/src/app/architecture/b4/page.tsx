@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { DocArticle, DocCallout } from '@/components/architecture/DocArticle';
+import { MermaidDiagram } from '@/components/architecture/MermaidDiagram';
 
 export const metadata: Metadata = {
   title: 'B4 · Provably fair packs',
@@ -65,6 +66,39 @@ export default function ArchitectureB4Page() {
           expectations, and reports a chi-squared style fairness summary — usable by anyone without admin auth.
           B5&apos;s admin fairness panel reuses this endpoint.
         </p>
+      </section>
+
+      <section>
+        <h2>Sequence diagram</h2>
+        <MermaidDiagram chart={`sequenceDiagram
+  autonumber
+  participant U as Buyer UI
+  participant API as Purchase service/API
+  participant PF as Provably-fair module
+  participant DB as Postgres
+  participant Verify as /verify/[purchaseId]
+  participant Audit as /api/audit/packs
+
+  U->>API: Purchase request (optional clientSeed)
+  API->>PF: generate serverSeed + SHA256 hash
+  API->>PF: derive deterministic draws (HMAC-SHA256 by draw_index)
+  API->>DB: atomic write (purchase, cards, seed hash, balances, ledger)
+  DB-->>U: purchase accepted
+
+  U->>API: Reveal pack cards
+  API->>DB: mark revealed cards; expose serverSeed when fully revealed
+  DB-->>U: reveal payload includes verification inputs
+
+  U->>Verify: open /verify/[purchaseId]
+  Verify->>API: GET /api/packs/[purchaseId]/verify-data
+  API->>DB: fetch hash, seed, cards, draw indexes
+  API-->>Verify: verification dataset
+  Verify->>Verify: recompute draws + hash in browser
+  Verify-->>U: pass/fail proof
+
+  U->>Audit: GET /api/audit/packs
+  Audit->>DB: aggregate rarity frequencies + fairness stats
+  Audit-->>U: public statistical fairness summary`} />
       </section>
 
       <section>
