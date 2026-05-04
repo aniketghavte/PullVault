@@ -16,6 +16,10 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
   REALTIME_INTERNAL_TOKEN: z.string().min(16),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+  // B2 — realtime pack-purchase worker calls back into web's internal
+  // purchase endpoint. Falls back to NEXT_PUBLIC_APP_URL when unset so
+  // local dev "just works" without extra env vars.
+  WEB_INTERNAL_URL: z.string().url().optional(),
   POKEMON_TCG_API_URL: z.string().url().default('https://api.pokemontcg.io/v2'),
   POKEMON_TCG_API_KEY: z.string().optional(),
   PRICE_REFRESH_HOT_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),

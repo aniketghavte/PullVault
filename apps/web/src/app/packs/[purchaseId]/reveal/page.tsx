@@ -290,6 +290,11 @@ export default function PackRevealPage({ params }: { params: Promise<{ purchaseI
                 After reveal, each card can be listed for trade or put into a live auction.
               </p>
               {isComplete ? (
+                <a href={`/verify/${purchase.purchaseId}`} className="block text-sm underline">
+                  Verify this pack was drawn fairly
+                </a>
+              ) : null}
+              {isComplete ? (
                 <ButtonPrimary onClick={() => router.push('/portfolio')} className="w-full justify-center">
                   Manage your cards
                 </ButtonPrimary>

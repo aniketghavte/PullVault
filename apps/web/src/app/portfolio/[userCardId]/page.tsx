@@ -17,6 +17,8 @@ interface DetailData {
   card: {
     userCardId: string;
     status: string;
+    acquiredFrom: string;
+    sourceRefId: string | null;
     acquiredPriceUSD: string;
     acquiredAt: string;
     cardId: string;
@@ -217,6 +219,11 @@ export default function PortfolioCardDetailPage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                 </div>
+                {card.acquiredFrom === 'pack' && card.sourceRefId ? (
+                  <Link href={`/verify/${card.sourceRefId}`} className="text-sm underline">
+                    Verify provably fair draw
+                  </Link>
+                ) : null}
               </div>
             </div>
 

@@ -14,7 +14,10 @@
     "./constants": "./src/constants.ts",
     "./logger": "./src/logger.ts",
     "./events": "./src/events.ts",
-    "./pack-economics": "./src/pack-economics.ts"
+    "./pack-economics": "./src/pack-economics.ts",
+    "./provably-fair": "./src/provably-fair.ts",
+    "./rate-limiter": "./src/rate-limiter.ts",
+    "./purchase-queue": "./src/purchase-queue.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

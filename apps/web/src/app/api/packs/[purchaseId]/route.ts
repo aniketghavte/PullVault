@@ -18,6 +18,9 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ purcha
       tierCode: schema.packTiers.code,
       pricePaidUsd: schema.packPurchases.pricePaidUsd,
       sealed: schema.packPurchases.sealed,
+      serverSeed: schema.packPurchases.serverSeed,
+      serverSeedHash: schema.packPurchases.serverSeedHash,
+      clientSeed: schema.packPurchases.clientSeed,
     })
     .from(schema.packPurchases)
     .innerJoin(schema.packTiers, eq(schema.packTiers.id, schema.packPurchases.tierId))
@@ -63,6 +66,9 @@ export const GET = handler(async (_req: Request, ctx: { params: Promise<{ purcha
     tierCode: purchase.tierCode,
     pricePaidUSD: toMoneyString(purchase.pricePaidUsd),
     sealed: purchase.sealed,
+    serverSeed: purchase.sealed ? null : purchase.serverSeed,
+    serverSeedHash: purchase.serverSeedHash,
+    clientSeed: purchase.clientSeed ?? purchase.id,
     revealedCount,
     drawnCards: cardsRows.map((c) => ({
       rarity: c.rarity,

@@ -4,9 +4,10 @@ import { eq } from 'drizzle-orm';
 import { requireUserId } from '@/lib/auth';
 import { publishInternal, INTERNAL_EVENTS } from '@/lib/realtime/publisher';
 import { REDIS_KEYS } from '@pullvault/shared/constants';
-import { ERROR_CODES, PLATFORM } from '@pullvault/shared';
+import { ERROR_CODES, PLATFORM, RATE_LIMITS } from '@pullvault/shared';
 import { buyListingSchema } from '@pullvault/shared';
 import { money, feeOf } from '@pullvault/shared/money';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // POST /api/listings/:listingId/buy
 // Atomic trade transaction:
@@ -25,6 +26,15 @@ import { money, feeOf } from '@pullvault/shared/money';
 export const POST = handler(async (req: Request, ctx: { params: Promise<{ listingId: string }> }) => {
   const buyerId = await requireUserId();
   const { listingId } = await ctx.params;
+
+  // B2 — 5 purchases/min per user. Same ceiling as bids; trade-sale races
+  // are resolved atomically below, rate-limit is about volume not fairness.
+  const rl = await checkRateLimit(req, buyerId, {
+    keyPrefix: 'listing-buy',
+    userConfig: RATE_LIMITS.LISTING_BUY_USER,
+  });
+  if (rl) return rl;
+
   const rawBody = await req.text();
   const body =
     rawBody.trim().length === 0 ? {} : (JSON.parse(rawBody) as Record<string, unknown>);

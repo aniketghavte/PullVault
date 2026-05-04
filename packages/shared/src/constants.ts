@@ -22,6 +22,24 @@ export const PLATFORM = {
   // Hard cap so a stubborn pair can't extend forever (defensive).
   AUCTION_MAX_EXTENSIONS: 20,
 
+  // B3 - Sealed-bid phase. Once an auction has been extended this many
+  // times AND the timer shows <= SEAL_SECONDS_LEFT, the next accepted
+  // bid flips status to 'sealed' and broadcasts redact `currentHighBid`
+  // + `currentHighBidderId`. Threshold of 3 extensions matches the brief
+  // and keeps normal back-and-forth auctions fully transparent.
+  SEAL_EXTENSIONS_THRESHOLD: 3,
+  SEAL_SECONDS_LEFT: 60,
+
+  // B3 - Bid validation rules.
+  // Fat-finger cap: no bid may exceed this multiple of the card's market
+  // price. 10x lets even hype-driven overpays through while stopping
+  // "I meant $50, typed $500000" mistakes.
+  MAX_BID_MARKET_MULTIPLIER: 10,
+  // Minimum gap between consecutive bids from the same user on the same
+  // auction. Stops rapid micro-bidding / spray scripts. 5s is loose
+  // enough that a deliberate counter-bid in the final seconds is fine.
+  MIN_BID_INTERVAL_SECONDS: 5,
+
   // Pack drop UX
   DROP_PRESALE_VISIBLE_HOURS: 12,
   DROP_PURCHASE_RATE_LIMIT_PER_USER_PER_DROP: 5,
@@ -69,8 +87,8 @@ export const PACK_ECONOMICS = {
   // "Emergency" band outside which the BullMQ rebalancer will auto-apply
   // solved weights after a price refresh. Margins between the band are
   // considered healthy drift and are left alone.
-  EMERGENCY_MARGIN_FLOOR: 0.05,
-  EMERGENCY_MARGIN_CEILING: 0.45,
+  EMERGENCY_MARGIN_FLOOR: 0.08,
+  EMERGENCY_MARGIN_CEILING: 0.25,
 } as const;
 
 // Pack tier definitions. Numbers are JUSTIFIED in architecture.md.
@@ -80,7 +98,7 @@ export const PACK_TIERS = [
   {
     code: 'standard',
     name: 'Standard Booster',
-    priceUSD: '4.99',
+    priceUSD: '41.99',
     cardsPerPack: 5,
     rarityWeights: {
       common: 0.7,
@@ -93,7 +111,7 @@ export const PACK_TIERS = [
   {
     code: 'premium',
     name: 'Premium Booster',
-    priceUSD: '14.99',
+    priceUSD: '87.99',
     cardsPerPack: 7,
     rarityWeights: {
       common: 0.5,
@@ -106,7 +124,7 @@ export const PACK_TIERS = [
   {
     code: 'elite',
     name: 'Elite Vault',
-    priceUSD: '49.99',
+    priceUSD: '220.00',
     cardsPerPack: 10,
     rarityWeights: {
       common: 0.3,
@@ -119,7 +137,7 @@ export const PACK_TIERS = [
   {
     code: 'whale',
     name: 'Whale Crate',
-    priceUSD: '199.99',
+    priceUSD: '399.99',
     cardsPerPack: 15,
     rarityWeights: {
       common: 0.15,
@@ -159,8 +177,36 @@ export const REDIS_KEYS = {
     auctionClose: 'pv_queue_auction_close',
     priceRefresh: 'pv_queue_price_refresh',
     packReveal: 'pv_queue_pack_reveal',
+    // B2 — purchases are enqueued with 0-2s jitter so bots firing at T+0ms
+    // and humans clicking at T+400ms both get a randomized delay, erasing
+    // the "fastest HTTP client wins" advantage.
+    packPurchase: 'pv_queue_pack_purchase',
   },
 } as const;
+
+// =====================================================================
+// B2 — Rate-limit configs. Tuned per endpoint.
+// =====================================================================
+// Intentionally strict on the "money moves" hot paths (purchase/bid/buy)
+// and generous on read endpoints. Values are justified by the work-trial
+// brief: 3 pack buys/min is well above any legitimate user; 5 bids/min
+// still allows spirited bidding but blocks micro-bid scripts.
+export const RATE_LIMITS = {
+  // Pack purchase: 3 per minute per user (strict — the P0 concurrency path).
+  PACK_PURCHASE_USER: { windowMs: 60_000, max: 3 },
+  // Pack purchase: 10 per minute per IP (catches multi-account from one NAT).
+  PACK_PURCHASE_IP: { windowMs: 60_000, max: 10 },
+  // Bid placement: 5 per minute per user (prevents rapid micro-bids).
+  BID_USER: { windowMs: 60_000, max: 5 },
+  // Listing buy: 5 per minute per user (same ceiling as bids).
+  LISTING_BUY_USER: { windowMs: 60_000, max: 5 },
+  // General API: 60 per minute per user — for future per-endpoint use.
+  API_GENERAL_USER: { windowMs: 60_000, max: 60 },
+  // Auth attempts: 5 per 15 minutes per IP — for future use in login routes.
+  AUTH_IP: { windowMs: 900_000, max: 5 },
+} as const;
+
+export type RateLimitKey = keyof typeof RATE_LIMITS;
 
 export const SOCKET_ROOMS = {
   auction: (auctionId: string) => `auction:${auctionId}`,

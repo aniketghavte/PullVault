@@ -1,6 +1,6 @@
 import { handler, ApiError } from '@/lib/api';
 import { requireUserId } from '@/lib/auth';
-import { ERROR_CODES } from '@pullvault/shared';
+import { ERROR_CODES, RATE_LIMITS } from '@pullvault/shared';
 import { placeBidSchema } from '@pullvault/shared';
 import { placeBid } from '@/services/auction-service';
 import { publishInternal, INTERNAL_EVENTS } from '@/lib/realtime/publisher';
@@ -8,6 +8,7 @@ import { REDIS_KEYS } from '@pullvault/shared/constants';
 import { db, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { scheduleAuctionCloseJob } from '@/lib/realtime/internal';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // POST /api/auctions/:auctionId/bid
 //
@@ -21,6 +22,15 @@ import { scheduleAuctionCloseJob } from '@/lib/realtime/internal';
 export const POST = handler(async (req: Request, ctx: { params: Promise<{ auctionId: string }> }) => {
   const userId = await requireUserId();
   const { auctionId } = await ctx.params;
+
+  // B2 — rate limit: 5 bids/min per user. Prevents rapid micro-bid spam
+  // without starving legitimate back-and-forth in the final seconds.
+  const rl = await checkRateLimit(req, userId, {
+    keyPrefix: 'bid',
+    userConfig: RATE_LIMITS.BID_USER,
+  });
+  if (rl) return rl;
+
   const body = await req.json();
 
   const parsed = placeBidSchema.safeParse({ ...body, auctionId });
@@ -39,16 +49,24 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ auctio
 
   // AFTER commit: publish events to Redis pub/sub
   const channel = REDIS_KEYS.channel.auctionEvents(auctionId);
+  const isSealed = result.newStatus === 'sealed';
 
+  // B3 — In sealed phase we HIDE the current-high amount and bidder id
+  // from everyone. The bidder's own echo goes via the portfolio channel
+  // below, not here, so this redaction is safe: a sniper listening to
+  // the public auction room only sees bid counts + timestamps, never
+  // the number to beat.
   await publishInternal(channel, INTERNAL_EVENTS.bidAccepted, {
     auctionId,
     bidId: result.bidId,
-    bidderId: userId,
-    bidderHandle: bidderProfile?.handle ?? 'Unknown',
-    amountUSD: result.amountUSD,
+    bidderId: isSealed ? null : userId,
+    bidderHandle: isSealed ? null : (bidderProfile?.handle ?? 'Unknown'),
+    amountUSD: isSealed ? null : result.amountUSD,
     placedAt: new Date().toISOString(),
     causedExtension: result.causedExtension,
+    causedSeal: result.causedSeal,
     newEndAt: result.newEndAt,
+    status: result.newStatus,
   });
 
   if (result.causedExtension) {
@@ -56,14 +74,26 @@ export const POST = handler(async (req: Request, ctx: { params: Promise<{ auctio
       auctionId,
       newEndAt: result.newEndAt,
       extensions: result.newExtensions,
-      currentHighBidUSD: result.amountUSD,
-      currentHighBidderId: userId,
+      currentHighBidUSD: isSealed ? null : result.amountUSD,
+      currentHighBidderId: isSealed ? null : userId,
+      status: result.newStatus,
     });
 
     // Schedule a new close job at the new end time
     await scheduleAuctionCloseJob({
       auctionId,
       endAt: result.newEndAt,
+    });
+  }
+
+  // One-shot sealed notification on the flip edge so the UI can
+  // immediately swap the widget without waiting for the next bid.
+  if (result.causedSeal) {
+    await publishInternal(channel, INTERNAL_EVENTS.auctionSealed, {
+      auctionId,
+      newEndAt: result.newEndAt,
+      extensions: result.newExtensions,
+      status: 'sealed' as const,
     });
   }
 
